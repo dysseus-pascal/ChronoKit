@@ -1,7 +1,7 @@
 {
   "name": "chronokit",
   "author": "dysseus-pascal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {},
@@ -25,7 +25,9 @@
       "media": [
         {
           "menuIcon": true,
-          "type": "pbi8",
+          "type": "bitmap",
+          "memoryFormat": "8Bit",
+          "storageFormat": "pbi",
           "name": "IMAGE_ICON",
           "file": "images/system_icon.png"
         },
@@ -130,12 +132,14 @@
           "file": "images/action_bar_icon_delete.png"
         },
         {
-          "type": "png-trans",
+          "type": "bitmap",
+          "memoryFormat": "1Bit",
           "name": "IMAGE_PAUSE_TRANS",
           "file": "images/image_pause_bw.png"
         },
         {
-          "type": "png-trans",
+          "type": "bitmap",
+          "memoryFormat": "1Bit",
           "name": "IMAGE_PLAY_TRANS",
           "file": "images/image_play_bw.png"
         }

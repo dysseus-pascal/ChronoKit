@@ -220,8 +220,8 @@ static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, v
 static MenuWindow *menu_window_init(MenuWindow *menu_window,
                                     MenuWindowCallbacks menu_window_callbacks, bool animated) {
   // load resources
-  menu_window->play_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PLAY_TRANS_WHITE);
-  menu_window->pause_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PAUSE_TRANS_WHITE);
+  menu_window->play_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PLAY_TRANS);
+  menu_window->pause_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PAUSE_TRANS);
   // create window
   menu_window->window = window_create();
   menu_window->callbacks = menu_window_callbacks;
