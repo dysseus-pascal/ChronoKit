@@ -17,25 +17,42 @@ kleines Startmenü:
 
 ## Bilder
 
+### emery (200×228, Farbe, eckig)
+
 | Startmenü | Stoppuhr | Pausiert | Timer stellen |
 |:--:|:--:|:--:|:--:|
-| ![Auswahl zwischen Stoppuhr und Timer](screenshots/01-startmenue.png) | ![Laufende Stoppuhr mit vier Zwischenzeiten](screenshots/02-stoppuhr-runden.png) | ![Pausierte Stoppuhr](screenshots/03-stoppuhr-pausiert.png) | ![Eingabe mit aktivem Minutenfeld](screenshots/04-timer-stellen.png) |
+| ![Startmenü auf emery](screenshots/emery/01-startmenue.png) | ![Stoppuhr auf emery](screenshots/emery/02-stoppuhr-runden.png) | ![Pausiert auf emery](screenshots/emery/03-stoppuhr-pausiert.png) | ![Timer stellen auf emery](screenshots/emery/04-timer-stellen.png) |
 
 | Timer-Detail | Timer-Liste | Alarm |
 |:--:|:--:|:--:|
-| ![Fortschritt als steigende Füllung](screenshots/05-timer-detail.png) | ![Ein laufender und ein pausierter Timer](screenshots/06-timer-liste.png) | ![Alarmfenster mit Schlummern und Verwerfen](screenshots/07-alarm.png) |
+| ![Timer-Detail auf emery](screenshots/emery/05-timer-detail.png) | ![Timer-Liste auf emery](screenshots/emery/06-timer-liste.png) | ![Alarm auf emery](screenshots/emery/07-alarm.png) |
 
-Dieselben Screens auf den beiden anderen Plattformen:
+### flint (144×168, schwarz-weiss, eckig)
 
-| flint (s/w, 144×168) | flint | gabbro (rund, 260×260) | gabbro |
+| Startmenü | Stoppuhr | Pausiert | Timer stellen |
 |:--:|:--:|:--:|:--:|
-| ![Stoppuhr auf flint](screenshots/flint-stoppuhr.png) | ![Timer-Detail auf flint](screenshots/flint-timer-detail.png) | ![Stoppuhr auf gabbro](screenshots/gabbro-stoppuhr.png) | ![Timer-Detail auf gabbro](screenshots/gabbro-timer-detail.png) |
+| ![Startmenü auf flint](screenshots/flint/01-startmenue.png) | ![Stoppuhr auf flint](screenshots/flint/02-stoppuhr-runden.png) | ![Pausiert auf flint](screenshots/flint/03-stoppuhr-pausiert.png) | ![Timer stellen auf flint](screenshots/flint/04-timer-stellen.png) |
+
+| Timer-Detail | Timer-Liste | Alarm |
+|:--:|:--:|:--:|
+| ![Timer-Detail auf flint](screenshots/flint/05-timer-detail.png) | ![Timer-Liste auf flint](screenshots/flint/06-timer-liste.png) | ![Alarm auf flint](screenshots/flint/07-alarm.png) |
 
 Auf flint ist die Fortschrittsfüllung weiss, sonst stünde die schwarze Zeit auf
-schwarzem Grund. Sichtbar bleibt der Fortschritt dort durch die Linie an der
-Füllkante, die auf Farbgeräten zusätzlich die Grenze zwischen den Grüntönen schärft.
+schwarzem Grund. Sichtbar bleibt der Fortschritt durch die Linie an der Füllkante,
+die auf Farbgeräten zusätzlich die Grenze zwischen den Grüntönen schärft.
 
-Alle Aufnahmen stammen aus dem Emulator in nativer Auflösung der jeweiligen Plattform.
+### gabbro (260×260, Farbe, rund)
+
+| Startmenü | Stoppuhr | Pausiert | Timer stellen |
+|:--:|:--:|:--:|:--:|
+| ![Startmenü auf gabbro](screenshots/gabbro/01-startmenue.png) | ![Stoppuhr auf gabbro](screenshots/gabbro/02-stoppuhr-runden.png) | ![Pausiert auf gabbro](screenshots/gabbro/03-stoppuhr-pausiert.png) | ![Timer stellen auf gabbro](screenshots/gabbro/04-timer-stellen.png) |
+
+| Timer-Detail | Timer-Liste | Alarm |
+|:--:|:--:|:--:|
+| ![Timer-Detail auf gabbro](screenshots/gabbro/05-timer-detail.png) | ![Timer-Liste auf gabbro](screenshots/gabbro/06-timer-liste.png) | ![Alarm auf gabbro](screenshots/gabbro/07-alarm.png) |
+
+Alle Aufnahmen stammen aus dem Emulator in nativer Auflösung der jeweiligen
+Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
 
 ## Bedienung
 
