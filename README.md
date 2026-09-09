@@ -7,6 +7,18 @@ kleines Startmenü:
 - **Stoppuhr** — Port von [coredevices/pebble-stopwatch](https://github.com/coredevices/pebble-stopwatch)
 - **Timer** — Port von [coredevices/pebble-timer](https://github.com/coredevices/pebble-timer)
 
+## Bilder
+
+| Startmenü | Stoppuhr | Pausiert | Timer stellen |
+|:--:|:--:|:--:|:--:|
+| ![Auswahl zwischen Stoppuhr und Timer](screenshots/01-startmenue.png) | ![Laufende Stoppuhr mit vier Zwischenzeiten](screenshots/02-stoppuhr-runden.png) | ![Pausierte Stoppuhr](screenshots/03-stoppuhr-pausiert.png) | ![Eingabe mit aktivem Minutenfeld](screenshots/04-timer-stellen.png) |
+
+| Timer-Detail | Timer-Liste | Alarm |
+|:--:|:--:|:--:|
+| ![Fortschritt als steigende Füllung](screenshots/05-timer-detail.png) | ![Ein laufender und ein pausierter Timer](screenshots/06-timer-liste.png) | ![Alarmfenster mit Schlummern und Verwerfen](screenshots/07-alarm.png) |
+
+Aufnahmen aus dem Emulator in nativer Auflösung 200×228.
+
 ## Bedienung
 
 **Stoppuhr** (mintgrüner Screen, LECO-Ziffern, Action-Bar rechts)
