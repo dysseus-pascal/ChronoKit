@@ -5,47 +5,25 @@
  *      Create, destroy, and manage a MenuWindow to display
  *      a list of CountdownTimers
  *
- * PUBLIC FUNCTIONS :
- *      MenuWindow  *menu_window_create(MenuWindowCallbacks
- *                      menu_window_callbacks, bool animated);
- *      void        menu_window_destroy(MenuWindow *menu_window);
- *      bool        menu_window_get_topmost_window(MenuWindow *menu_window);
- *      void        menu_window_refresh(MenuWindow *menu_window);
- *      void        menu_window_reload_data(MenuWindow *menu_window);
- *      void        menu_window_set_highlight_color(MenuWindow *menu_window,
- *                      GColor color);
- *
  * AUTHOR :     Eric Phillips        START DATE :    07/10/15
  *
  */
 
 #include <pebble.h>
 #include "menu_window.h"
-#include "countdown_timer.h"
 #include "theme.h"
 
 // Constants
-#ifdef PBL_ROUND
-#define MENU_CELL_PROG_BORDER 20
-#define MENU_CELL_CENTERED true
+#define MENU_CELL_PROG_BORDER PBL_IF_ROUND_ELSE(20, 10)
+#define MENU_CELL_CENTERED PBL_IF_ROUND_ELSE(true, false)
 #define MENU_CELL_PROG_THICK 3
-#else
-#define MENU_CELL_PROG_BORDER 10
-#define MENU_CELL_CENTERED false
-#define MENU_CELL_PROG_THICK 3
-#endif
 #define MENU_CELL_TEXT_Y_BUFF_RATIO 0.2
 #define MENU_LAYER_DEFAULT_CELL_HEIGHT 52
 #define MENU_LAYER_SELECTED_CELL_HEIGHT 65
 
 
-
 /*******************************************************************************
  * STRUCTURE DEFINITION
- */
-
-/*
- * the structure of a MenuWindow
  */
 
 struct MenuWindow {
@@ -53,41 +31,24 @@ struct MenuWindow {
   MenuLayer   *menu;      //< menu layer displaying timer list
   TextLayer   *text;      //< text layer which displays "No Timers"
   GBitmap     *play_icon, *pause_icon;    //< menu layer icons
-  StatusBarLayer      *status;            //< status bar for Basalt
+  StatusBarLayer      *status;            //< status bar
   MenuWindowCallbacks callbacks;          //< menu layer callbacks
 };
-
 
 
 /*******************************************************************************
  * PRIVATE FUNCTIONS
  */
 
-/*
- * get number of sections for menu layer
- * this is always zero for this application
- */
-
-static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *context) {
-  return 1;
-}
-
-
-
-/*
- * get number of rows per section for menu layer
- * since there is only one section, no need to take sections into account
- */
-
+// get number of rows for the (single) menu section: all timers plus the "+" row
 static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index,
                                            void *context) {
   MenuWindow *menu_window = (MenuWindow*)context;
   return menu_window->callbacks.get_timer_count(context) + 1;
 }
 
-
-
-// Return height of each menu layer cell
+#ifdef PBL_ROUND
+// Return height of each menu layer cell (round only)
 // Allows currently selected cell to be larger
 static int16_t menu_get_row_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void
 *context) {
@@ -97,6 +58,7 @@ static int16_t menu_get_row_height_callback(MenuLayer *menu_layer, MenuIndex *ce
     return MENU_LAYER_DEFAULT_CELL_HEIGHT;
   }
 }
+#endif
 
 // Draw a menu layer cell with optional text, image, and progress bar
 // All items are centered as best as possible in all directions
@@ -155,17 +117,10 @@ static void menu_cell_draw(GContext *ctx, const Layer *layer, char *title, GBitm
   }
 }
 
-
-
-/*
- * draw each row for menu layer
- */
-
+// draw each row for menu layer, with "+" in the first cell
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index,
                                    void *context) {
-  // get properties
   MenuWindow *menu_window = (MenuWindow *) context;
-  // draw contents, with "+" in first cell
   if (cell_index->row == 0) {
     menu_cell_draw(ctx, cell_layer, "+", NULL, 0, fonts_get_system_font(FONT_KEY_GOTHIC_28),
       true, GColorBlack, GColorWhite);
@@ -185,96 +140,23 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
     GColor progress_bg_color = PBL_IF_COLOR_ELSE(GColorWhite, GColorLightGray);
     GColor progress_fg_color  = PBL_IF_COLOR_ELSE(GColorBlack, GColorWhite);
     if (!menu_cell_layer_is_highlighted(cell_layer)) {
-#ifdef PBL_BW
-      progress_fg_color  = GColorBlack;
-#else
-      // normale Zeile: dasselbe Paar wie die Fuellung im Timer-Detail
-      progress_bg_color = ZM_COLOR_SURFACE;
-      progress_fg_color = ZM_COLOR_ACCENT;
-#ifdef PBL_ROUND
-      progress = 0;
-#endif
-#endif
+      // normale Zeile: auf Farbgeraeten dasselbe Paar wie die Fuellung im
+      // Timer-Detail, auf S/W schwarzer Balken auf unveraenderter Spur;
+      // auf runden Displays wird der Balken nur in der markierten Zeile gezeigt
+      progress_bg_color = PBL_IF_COLOR_ELSE(ZM_COLOR_SURFACE, progress_bg_color);
+      progress_fg_color = PBL_IF_COLOR_ELSE(ZM_COLOR_ACCENT, GColorBlack);
+      progress = PBL_IF_ROUND_ELSE(0, progress);
     }
     menu_cell_draw(ctx, cell_layer, buff, icon, progress, font, MENU_CELL_CENTERED, progress_fg_color,
       progress_bg_color);
   }
 }
 
-
-/*
- * menu layer clicked callback
- */
-
+// menu layer clicked callback
 static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
   MenuWindow *menu_window = (MenuWindow*)context;
   menu_window->callbacks.clicked(cell_index->row, context);
 }
-
-
-
-/*
- * menu window initialize
- */
-
-static MenuWindow *menu_window_init(MenuWindow *menu_window,
-                                    MenuWindowCallbacks menu_window_callbacks, bool animated) {
-  // load resources
-  menu_window->play_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PLAY_TRANS);
-  menu_window->pause_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PAUSE_TRANS);
-  // create window
-  menu_window->window = window_create();
-  menu_window->callbacks = menu_window_callbacks;
-  if (menu_window->play_icon && menu_window->pause_icon && menu_window->window) {
-    // get window parameters
-    Layer *root = window_get_root_layer(menu_window->window);
-    GRect bounds = layer_get_frame(root);
-    // create menu layer
-#ifdef PBL_ROUND
-    menu_window->menu = menu_layer_create(bounds);
-#else
-    menu_window->menu = menu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, bounds.size.w,
-                                          bounds.size.h - STATUS_BAR_LAYER_HEIGHT));
-#endif
-#ifdef PBL_ROUND
-    menu_layer_set_center_focused(menu_window->menu, true);
-#endif
-    menu_layer_set_callbacks(menu_window->menu, menu_window, (MenuLayerCallbacks) {
-      .get_num_sections = menu_get_num_sections_callback,
-      .get_num_rows = menu_get_num_rows_callback,
-      .draw_row = menu_draw_row_callback,
-      .select_click = menu_select_callback,
-#ifdef PBL_ROUND
-      .get_cell_height = menu_get_row_height_callback,
-#endif
-    });
-    menu_layer_set_click_config_onto_window(menu_window->menu, menu_window->window);
-    layer_add_child(root, menu_layer_get_layer(menu_window->menu));
-    // create text layer
-#ifdef PBL_ROUND
-    menu_window->text = text_layer_create(GRect(0, 129, bounds.size.w, 20));
-#else
-    menu_window->text = text_layer_create(GRect(0, 85, bounds.size.w, 20));
-#endif
-    text_layer_set_text(menu_window->text, "Keine Timer");
-    text_layer_set_font(menu_window->text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-    text_layer_set_text_alignment(menu_window->text, GTextAlignmentCenter);
-    text_layer_set_background_color(menu_window->text, GColorClear);
-    layer_add_child(root, text_layer_get_layer(menu_window->text));
-    // create status bar
-    menu_window->status = status_bar_layer_create();
-    status_bar_layer_set_colors(menu_window->status, GColorClear, GColorBlack);
-    layer_add_child(root, status_bar_layer_get_layer(menu_window->status));
-    // push window
-    window_stack_push(menu_window->window, animated);
-    return menu_window;
-  }
-
-  // free menu window
-  free(menu_window);
-  return NULL;
-}
-
 
 
 /*******************************************************************************
@@ -282,44 +164,82 @@ static MenuWindow *menu_window_init(MenuWindow *menu_window,
  */
 
 /*
- * create a new MenuWindow and return a pointer to it
- * this includes creating all its children layers
+ * create a new MenuWindow with all its children layers, push it and return a pointer to it
  */
 
 MenuWindow *menu_window_create(MenuWindowCallbacks menu_window_callbacks, bool animated) {
   MenuWindow *menu_window = (MenuWindow*)malloc(sizeof(MenuWindow));
-  if (menu_window) {
-    menu_window_init(menu_window, menu_window_callbacks, animated);
-  } else {
-    // error handling
+  if (!menu_window) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create MenuWindow");
     return NULL;
   }
+  // load resources
+  menu_window->play_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PLAY_TRANS);
+  menu_window->pause_icon = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PAUSE_TRANS);
+  // create window
+  menu_window->window = window_create();
+  menu_window->callbacks = menu_window_callbacks;
+  if (!menu_window->play_icon || !menu_window->pause_icon || !menu_window->window) {
+    // nur bei Speichermangel erreichbar; die bereits angelegten Teile freigeben
+    if (menu_window->play_icon) gbitmap_destroy(menu_window->play_icon);
+    if (menu_window->pause_icon) gbitmap_destroy(menu_window->pause_icon);
+    if (menu_window->window) window_destroy(menu_window->window);
+    free(menu_window);
+    return NULL;
+  }
+  Layer *root = window_get_root_layer(menu_window->window);
+  GRect bounds = layer_get_frame(root);
+  // create menu layer
+#ifdef PBL_ROUND
+  menu_window->menu = menu_layer_create(bounds);
+  menu_layer_set_center_focused(menu_window->menu, true);
+#else
+  menu_window->menu = menu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, bounds.size.w,
+                                        bounds.size.h - STATUS_BAR_LAYER_HEIGHT));
+#endif
+  menu_layer_set_callbacks(menu_window->menu, menu_window, (MenuLayerCallbacks) {
+    .get_num_rows = menu_get_num_rows_callback,
+    .draw_row = menu_draw_row_callback,
+    .select_click = menu_select_callback,
+#ifdef PBL_ROUND
+    .get_cell_height = menu_get_row_height_callback,
+#endif
+  });
+  menu_layer_set_click_config_onto_window(menu_window->menu, menu_window->window);
+  layer_add_child(root, menu_layer_get_layer(menu_window->menu));
+  // create text layer
+  menu_window->text = text_layer_create(GRect(0, PBL_IF_ROUND_ELSE(129, 85), bounds.size.w, 20));
+  text_layer_set_text(menu_window->text, "Keine Timer");
+  text_layer_set_font(menu_window->text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  text_layer_set_text_alignment(menu_window->text, GTextAlignmentCenter);
+  text_layer_set_background_color(menu_window->text, GColorClear);
+  layer_add_child(root, text_layer_get_layer(menu_window->text));
+  // create status bar
+  menu_window->status = status_bar_layer_create();
+  status_bar_layer_set_colors(menu_window->status, GColorClear, GColorBlack);
+  layer_add_child(root, status_bar_layer_get_layer(menu_window->status));
+  // push window
+  window_stack_push(menu_window->window, animated);
   return menu_window;
 }
-
-
 
 /*
  * destroy a previously created MenuWindow
  */
 
 void menu_window_destroy(MenuWindow *menu_window) {
-  if (menu_window != NULL) {
-    status_bar_layer_destroy(menu_window->status);
-    text_layer_destroy(menu_window->text);
-    menu_layer_destroy(menu_window->menu);
-    window_destroy(menu_window->window);
-    gbitmap_destroy(menu_window->play_icon);
-    gbitmap_destroy(menu_window->pause_icon);
-    free(menu_window);
+  if (!menu_window) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Attempted to free NULL MenuWindow");
     return;
   }
-  // error handling
-  APP_LOG(APP_LOG_LEVEL_ERROR, "Attempted to free NULL MenuWindow");
+  status_bar_layer_destroy(menu_window->status);
+  text_layer_destroy(menu_window->text);
+  menu_layer_destroy(menu_window->menu);
+  window_destroy(menu_window->window);
+  gbitmap_destroy(menu_window->play_icon);
+  gbitmap_destroy(menu_window->pause_icon);
+  free(menu_window);
 }
-
-
 
 /*
  * gets whether it is the topmost window on the stack
@@ -328,8 +248,6 @@ void menu_window_destroy(MenuWindow *menu_window) {
 bool menu_window_get_topmost_window(MenuWindow *menu_window) {
   return window_stack_get_top_window() == menu_window->window;
 }
-
-
 
 /*
  * push an existing MenuWindow back onto the stack
@@ -342,8 +260,6 @@ void menu_window_push(MenuWindow *menu_window, bool animated) {
   }
 }
 
-
-
 /*
  * refresh the provided MenuWindow
  */
@@ -354,8 +270,6 @@ void menu_window_refresh(MenuWindow *menu_window) {
   layer_set_hidden(text_layer_get_layer(menu_window->text), timer_count != 0);
 }
 
-
-
 /*
  * reload the data for the MenuWindow's MenuLayer
  */
@@ -364,8 +278,6 @@ void menu_window_reload_data(MenuWindow *menu_window) {
   // this makes the selected index go back to the top, but this is also desired
   menu_layer_reload_data(menu_window->menu);
 }
-
-
 
 /*
  * set highlight color of this window

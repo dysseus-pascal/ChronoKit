@@ -36,12 +36,8 @@ static void launcher_window_load(Window *window) {
   // Auf runden Displays nutzt das Menue die volle Flaeche und stellt die
   // Auswahl mittig, sonst wird es unter der Statusleiste eingehaengt.
   // Das entspricht dem Verhalten der Timer-Liste.
-#ifdef PBL_ROUND
-  s_launcher_menu = menu_layer_create(b);
-#else
-  s_launcher_menu = menu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, b.size.w,
-                                            b.size.h - STATUS_BAR_LAYER_HEIGHT));
-#endif
+  s_launcher_menu = menu_layer_create(PBL_IF_ROUND_ELSE(b,
+      GRect(0, STATUS_BAR_LAYER_HEIGHT, b.size.w, b.size.h - STATUS_BAR_LAYER_HEIGHT)));
   menu_layer_set_callbacks(s_launcher_menu, NULL, (MenuLayerCallbacks) {
     .get_num_rows = launcher_num_rows,
     .draw_row = launcher_draw_row,
@@ -69,8 +65,6 @@ static void launcher_window_unload(Window *window) {
 // Beide Module schrieben den Glance frueher selbst. app_glance_reload loescht
 // zuerst alle Slices, also ueberschrieb der Timer beim Beenden immer den
 // Eintrag der Stoppuhr. Jetzt baut ihn der Launcher einmal zusammen.
-#define ZM_GLANCE_BUFF_SIZE 50
-
 static void prv_add_slice(AppGlanceReloadSession *session, const char *str,
                           time_t expiration_time) {
   const AppGlanceSlice slice = {
@@ -85,7 +79,7 @@ static void prv_add_slice(AppGlanceReloadSession *session, const char *str,
 
 static void prv_update_app_glance(AppGlanceReloadSession *session, size_t limit, void *context) {
   size_t used = 0;
-  char buff[ZM_GLANCE_BUFF_SIZE];
+  char buff[50];
   time_t expiration;
 
   // laufender Timer zuerst: er hat ein Ende und ist die dringendere Information

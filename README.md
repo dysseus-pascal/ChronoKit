@@ -104,6 +104,7 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
 ## Struktur
 
 - `src/c/theme.h` — zentrale Farbpalette (siehe Farbschema oben)
+- `src/c/common.h` — gemeinsame Zeiteinheiten, vorher in vier Dateien einzeln definiert
 - `src/c/chronokit.c` — Launcher-Menü, bindet beide Module ein
 - `src/c/stopwatch.c`, `rendering.*` — offizielle Stoppuhr (angepasst: kein eigenes `main`,
   Rundenzeit als einfache Differenz statt Modulo-Rechnung, `WindowData` wird beim
@@ -116,6 +117,15 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
   kürzeste Timerdauer von 5 auf 1 Sekunde gesenkt -- kürzere Eingaben wurden
   vorher wortlos verworfen)
 - `resources/` — LECO-Fonts, Action-Bar-Icons, PDC-Animationen aus den Originalen
+
+Der übernommene Code wurde in Version 1.1.2 um rund 40 % gekürzt, ohne das Verhalten zu
+ändern: Zweige für nicht unterstützte Plattformen (aplite, basalt, chalk, diorite) und
+immer wahre SDK-Bedingungen entfernt, ungenutzte Funktionen und Felder gestrichen,
+doppelte Konstanten in `common.h` zusammengeführt, mehrfach kopierte Codepfade
+(z. B. vier fast identische Animations-Konstruktoren) zu je einem Helfer verschmolzen,
+und die seitenlangen Kommentarköpfe der Originale auf Einzeiler reduziert. Geprüft durch
+Builds auf allen drei Plattformen, einen Bildvergleich gegen den vorherigen Stand und
+eine unabhängige Durchsicht des Diffs mit Gegenprüfung jedes Befunds.
 
 ## Build (WSL, siehe auch Projekt-Memory)
 
@@ -136,7 +146,8 @@ Werkzeuge: pebble-tool 5.0.40, SDK 4.33.1 (Python 3.13 via uv).
 
 ## Herkunft und Lizenz
 
-Der Grossteil des C-Codes stammt unveraendert aus den beiden offiziellen Apps:
+Der Grossteil des C-Codes stammt aus den beiden offiziellen Apps (seit 1.1.2 gekuerzt und
+bereinigt, siehe Abschnitt Struktur; die Logik ist unveraendert):
 
 - `stopwatch.c`, `rendering.*` aus [coredevices/pebble-stopwatch](https://github.com/coredevices/pebble-stopwatch)
 - `timer_app.c` (dort `main.c`), `menu/detail/setting/popup_window.*`, `selection_layer.*`,
@@ -144,8 +155,9 @@ Der Grossteil des C-Codes stammt unveraendert aus den beiden offiziellen Apps:
   [coredevices/pebble-timer](https://github.com/coredevices/pebble-timer), urspruenglich
   von Eric Phillips
 
-Eigene Anteile: `chronokit.c` (Launcher), `theme.h` (Farbpalette), die deutschen Texte
-und die im Abschnitt Struktur genannten Korrekturen.
+Eigene Anteile: `chronokit.c` (Launcher), `theme.h` (Farbpalette), `common.h`, die
+deutschen Texte, die im Abschnitt Struktur genannten Korrekturen und die Kürzung und
+Bereinigung ab 1.1.2. Der gekürzte Code bleibt eine Bearbeitung der Originale.
 
 **Lizenzlage:** Beide Quell-Repositories sind ohne Lizenzdatei veroeffentlicht. Eine
 ausdrueckliche Nutzungsrechtseinraeumung fehlt daher, und dieses Repository kann fuer den

@@ -2,7 +2,6 @@
 
 #include <pebble.h>
 
-
 //! renders the LECO font onto the drawing context at the specified size
 //! @param ctx the DrawingContext to draw the text onto
 //! @param text the actual text to draw
@@ -12,9 +11,5 @@
 void rendering_draw_text(GContext *ctx, char *text, uint8_t size, uint16_t font_size,
                          GPoint position);
 
-
-//! gets the width a font will be when rendered
-//! @param the text under question
-//! @param the font size to measure the rendered size of
-//! @return the rendered width of the font
+//! gets the width a text will be when rendered at font_size
 uint32_t rendering_get_size(char *buff, uint8_t font_size);

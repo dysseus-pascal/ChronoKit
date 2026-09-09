@@ -1,31 +1,26 @@
 #include <pebble.h>
+#include "common.h"
 #include "rendering.h"
+#include "stopwatch.h"
 #include "theme.h"
 
 #define PERSIST_DATA_KEY 100
 #define PERSIST_DATA_VERSION 1 // the current version of the data. Increment this if changing format
 #define PERSIST_DATA_VERSION_KEY 0
 
-#define MSEC_IN_SEC 1000
-#define MSEC_IN_MIN 60000
-#define MSEC_IN_HR 3600000
-
 #define DATA_MAX_LAP_COUNT 22
 #define SCREEN_LAP_HEIGHT PBL_IF_ROUND_ELSE(14, 18)
-#define SCREEN_LAP_FONT_SIZE 12
 #define SCREEN_SCROLLING_OFF PBL_IF_ROUND_ELSE(86, 30)
 #define SCREEN_SCROLL_STEP_SMALL 6
 #define SCREEN_SCROLL_STEP_LARGE 18
 #define SCREEN_BORDER_WIDTH PBL_IF_ROUND_ELSE(22, 4)
 #define SCREEN_SPACING_WIDTH 4
 #define SCREEN_MAX_LAPS_BEFORE_SCROLLING PBL_IF_ROUND_ELSE(5, 6)
-// Flaeche der Stoppuhr; ZM_COLOR_SURFACE enthaelt den S/W-Fallback bereits
-#define HIGHLIGHT_COLOR ZM_COLOR_SURFACE
 
 // lap identifiers
 typedef enum {CurrentTime, CurrentLap, FirstLapHistory} Lap;
 
-// window data structure, removes all global variables!
+// window data structure
 typedef struct {
   Layer           *drawing_layer;   //< layer for drawing everything on
   ActionBarLayer  *action_bar;      //< layer to receive clicks
@@ -36,7 +31,7 @@ typedef struct {
   GBitmap         *icon_pause;      //< icon for pause button
   GBitmap         *icon_play;       //< icon for play button
   GBitmap         *icon_reset;      //< icon for reset button
-  GBitmap         *icon_up;         //< icon for reset button
+  GBitmap         *icon_up;         //< icon for scroll up button
 
   int64_t         epochs_ms[DATA_MAX_LAP_COUNT + 2]; //< memory for timing, with first element
                                     //< being current time, and second current lap
@@ -52,9 +47,7 @@ typedef struct {
 static WindowData *s_data = NULL;
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Utilities
-//
+// ---- Utilities ----
 
 // Zuletzt gelieferter Zeitwert, siehe prv_get_epoch_ms.
 static int64_t s_last_epoch_ms = 0;
@@ -81,12 +74,10 @@ static int64_t prv_get_epoch_ms(void) {
 // format a millisecond duration into text
 static void prv_format_duration_ms(char *buff_main, char *buff_ms, uint8_t size_main,
                                    uint8_t size_ms, int64_t duration, bool one_line) {
-  // get time parts
   int hr = duration / MSEC_IN_HR;
   int min = (duration % MSEC_IN_HR) / MSEC_IN_MIN;
   int sec = (duration % MSEC_IN_MIN) / MSEC_IN_SEC;
   int csec = duration % MSEC_IN_SEC / 10;
-  // format into string
   if (one_line) {
     snprintf(buff_main, size_main, "%d:%02d:%02d.%02d", hr, min, sec, csec);
     return;
@@ -140,24 +131,20 @@ static void prv_update_icons(WindowData *data) {
     action_bar_layer_set_icon(data->action_bar, BUTTON_ID_SELECT, data->icon_pause);
     action_bar_layer_set_icon(data->action_bar, BUTTON_ID_UP, data->icon_lap);
     action_bar_layer_set_icon(data->action_bar, BUTTON_ID_DOWN, data->icon_reset);
-#ifdef PBL_SDK_3
     action_bar_layer_set_icon_press_animation(data->action_bar, BUTTON_ID_UP,
                                               ActionBarLayerIconPressAnimationMoveLeft);
     action_bar_layer_set_icon_press_animation(data->action_bar, BUTTON_ID_DOWN,
                                               ActionBarLayerIconPressAnimationMoveLeft);
-#endif
   }
   else {
     action_bar_layer_set_icon(data->action_bar, BUTTON_ID_SELECT, data->icon_play);
     if (prv_get_scrolling_enabled(data)) {
       action_bar_layer_set_icon(data->action_bar, BUTTON_ID_UP, data->icon_up);
       action_bar_layer_set_icon(data->action_bar, BUTTON_ID_DOWN, data->icon_down);
-#ifdef PBL_SDK_3
       action_bar_layer_set_icon_press_animation(data->action_bar, BUTTON_ID_UP,
                                                 ActionBarLayerIconPressAnimationMoveUp);
       action_bar_layer_set_icon_press_animation(data->action_bar, BUTTON_ID_DOWN,
                                                 ActionBarLayerIconPressAnimationMoveDown);
-#endif
     }
     else {
       action_bar_layer_clear_icon(data->action_bar, BUTTON_ID_UP);
@@ -171,9 +158,7 @@ static void prv_update_icons(WindowData *data) {
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Drawing
-//
+// ---- Drawing ----
 
 // layer drawing callback
 static void prv_layer_draw(Layer *layer, GContext *ctx) {
@@ -245,23 +230,21 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
   for (int32_t ii = data->lap_count + 1, y = y_offset + data->total_height_ani;
     ii > 1;
     ii--, y -= SCREEN_LAP_HEIGHT) {
-    // print to string
     prv_format_duration_ms(buff_lap, NULL, sizeof(buff_lap), 0, data->epochs_ms[ii], true);
-    // draw on screen
     graphics_draw_text(ctx, buff_lap, data->font_small,
                        GRect(PBL_IF_RECT_ELSE(5, 15), y - 8, screen_width, SCREEN_LAP_HEIGHT),
                        GTextOverflowModeFill,
                        PBL_IF_RECT_ELSE(GTextAlignmentLeft, GTextAlignmentCenter), NULL);
   }
 
-#if defined(PBL_ROUND)
-    // Draw a box under the laps to cover the bottom laps
-    graphics_context_set_fill_color(ctx, HIGHLIGHT_COLOR);
-    graphics_fill_rect(ctx, GRect(0, bounds.size.h-24, 180, 24), 0, GCornerNone);
+#ifdef PBL_ROUND
+  // Draw a box under the laps to cover the bottom laps
+  graphics_context_set_fill_color(ctx, ZM_COLOR_SURFACE);
+  graphics_fill_rect(ctx, GRect(0, bounds.size.h-24, 180, 24), 0, GCornerNone);
 #endif
 
   // draw the text
-  graphics_context_set_fill_color(ctx, HIGHLIGHT_COLOR);
+  graphics_context_set_fill_color(ctx, ZM_COLOR_SURFACE);
   graphics_fill_rect(ctx,
                      GRect(0, 0, screen_width, y_offset + main_font_size + 5), 1, GCornerNone);
   graphics_context_set_fill_color(ctx, ZM_COLOR_ON_SURFACE);
@@ -288,18 +271,15 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Callbacks
-//
+// ---- Callbacks ----
 
 // timer callback
 static int32_t old_ani = 0, old_off = 0;
 static void prv_app_timer_callback(void *callback_data) {
   WindowData *data = (WindowData*)callback_data;
-  // refresh
   layer_mark_dirty(data->drawing_layer);
 
-  // check if in fast refresh mode
+  // fast refresh only while running or animating
   uint16_t refresh_ms = 80;
   if (old_ani == data->total_height_ani && old_off == data->total_height_off &&
       data->epochs_ms[CurrentTime] <= 0) {
@@ -308,16 +288,12 @@ static void prv_app_timer_callback(void *callback_data) {
   old_ani = data->total_height_ani;
   old_off = data->total_height_off;
 
-  // schedule next refresh
   data->app_timer = app_timer_register(refresh_ms, prv_app_timer_callback, data);
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Click Handlers
-//
+// ---- Click Handlers ----
 
-// button clicks
 static void prv_up_click_handler(ClickRecognizerRef recognizer, void *context) {
   WindowData *data = (WindowData*)context;
   // check if paused
@@ -356,7 +332,6 @@ static void prv_up_click_handler(ClickRecognizerRef recognizer, void *context) {
     }
   }
 
-  // refresh
   app_timer_reschedule(data->app_timer, 10);
 }
 
@@ -364,18 +339,15 @@ static void prv_select_click_handler(ClickRecognizerRef recognizer, void *contex
   WindowData *data = (WindowData*)context;
   // play or pause the stopwatch
   if (data->epochs_ms[CurrentTime] <= 0) {
-    // un-pause the stopwatch
     data->epochs_ms[CurrentTime] += prv_get_epoch_ms();
     data->epochs_ms[CurrentLap] += prv_get_epoch_ms();
   }
   else {
-    // pause the stopwatch
     data->epochs_ms[CurrentTime] -= prv_get_epoch_ms();
     data->epochs_ms[CurrentLap] -= prv_get_epoch_ms();
   }
   prv_update_icons(data);
 
-  // refresh
   app_timer_reschedule(data->app_timer, 10);
 }
 
@@ -387,7 +359,6 @@ static void prv_down_click_handler(ClickRecognizerRef recognizer, void *context)
     if (data->epochs_ms[CurrentTime] == 0) {
       return;
     }
-
     // reset stopwatch
     data->epochs_ms[CurrentTime] = 0;
     data->epochs_ms[CurrentLap] = 0;
@@ -405,7 +376,6 @@ static void prv_down_click_handler(ClickRecognizerRef recognizer, void *context)
     }
   }
 
-  // refresh
   app_timer_reschedule(data->app_timer, 10);
 }
 
@@ -420,9 +390,7 @@ static void prv_click_config_provider(void *context) {
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Loading/Unloading
-//
+// ---- Loading/Unloading ----
 
 // Text fuer den App-Glance liefern. Der Launcher (chronokit.c) baut daraus
 // zusammen mit dem Timer-Modul einen einzigen Glance; frueher rief jedes Modul
@@ -454,7 +422,7 @@ bool stopwatch_get_glance(char *buff_glance, size_t size, time_t *expiration_tim
 
   if (current_time > 0) {
     // laeuft: der Glance zaehlt selbst weiter
-    snprintf(buff_glance, size, "{time_since(%lld)|format('%%0fR:%%0S')}", current_time / 1000);
+    snprintf(buff_glance, size, "{time_since(%lld)|format('%%0fR:%%0S')}", current_time / MSEC_IN_SEC);
     *expiration_time = APP_GLANCE_SLICE_NO_EXPIRATION;
   }
   else {
@@ -469,39 +437,28 @@ bool stopwatch_get_glance(char *buff_glance, size_t size, time_t *expiration_tim
   return true;
 }
 
-// save persistent storage
+// save persistent storage (keys: version, lap count, height animation, epochs)
 static void prv_save_persistent_storage(WindowData *data) {
-  // write out data and storage version
   persist_write_int(PERSIST_DATA_VERSION_KEY, PERSIST_DATA_VERSION);
-  int32_t data_key = PERSIST_DATA_KEY;
-  persist_write_int(data_key++, data->lap_count);
-  persist_write_int(data_key++, data->total_height_ani);
-  persist_write_data(data_key, data->epochs_ms, sizeof(data->epochs_ms));
+  persist_write_int(PERSIST_DATA_KEY, data->lap_count);
+  persist_write_int(PERSIST_DATA_KEY + 1, data->total_height_ani);
+  persist_write_data(PERSIST_DATA_KEY + 2, data->epochs_ms, sizeof(data->epochs_ms));
 }
 
 // load persistent storage
 static void prv_load_persistent_storage(WindowData *data) {
-  // check if data and get version
   if (persist_exists(PERSIST_DATA_VERSION_KEY)) {
-    int32_t version = persist_read_int(PERSIST_DATA_VERSION_KEY);
-    int32_t data_key = PERSIST_DATA_KEY;
-    // load data with that version format
-    switch (version) {
-      case 1:
-        // load data version one and exit
-        data->lap_count = persist_read_int(data_key++);
-        data->total_height_ani = persist_read_int(data_key++);
-        persist_read_data(data_key, data->epochs_ms, sizeof(data->epochs_ms));
-        return;
-      default:
-        // if it doesn't match a known data version, delete it and start fresh
-        persist_delete(PERSIST_DATA_VERSION_KEY);
-        persist_delete(PERSIST_DATA_KEY);
-        break;
+    if (persist_read_int(PERSIST_DATA_VERSION_KEY) == PERSIST_DATA_VERSION) {
+      data->lap_count = persist_read_int(PERSIST_DATA_KEY);
+      data->total_height_ani = persist_read_int(PERSIST_DATA_KEY + 1);
+      persist_read_data(PERSIST_DATA_KEY + 2, data->epochs_ms, sizeof(data->epochs_ms));
+      return;
     }
+    // unknown data version: delete it and start fresh
+    persist_delete(PERSIST_DATA_VERSION_KEY);
+    persist_delete(PERSIST_DATA_KEY);
   }
-  // error handling
-  // if no know data version or first time loading reset all data
+  // no known data version or first time loading: reset all data
   memset(data->epochs_ms, 0, sizeof(data->epochs_ms));
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Unrecognized or no persistent storage");
 }
@@ -510,7 +467,6 @@ static void prv_load_persistent_storage(WindowData *data) {
 static void prv_window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
-  // create window data
   WindowData *data = (WindowData*)malloc(sizeof(WindowData));
   window_set_user_data(window, data);
   s_data = data;
@@ -520,7 +476,6 @@ static void prv_window_load(Window *window) {
     // total_height_ani nur wenn ein gespeicherter Stand existiert). Ohne dieses
     // memset startet die Stoppuhr mit zufaelligen Werten.
     memset(data, 0, sizeof(*data));
-    // load persistent state
     prv_load_persistent_storage(data);
     // load resources
     data->font_small = fonts_load_custom_font(
@@ -531,9 +486,7 @@ static void prv_window_load(Window *window) {
     data->icon_play = gbitmap_create_with_resource(RESOURCE_ID_ICON_PLAY);
     data->icon_reset = gbitmap_create_with_resource(RESOURCE_ID_ICON_RESET);
     data->icon_up = gbitmap_create_with_resource(RESOURCE_ID_ICON_UP);
-    // create layer
-    // IMPORTANT: must be created with data for the WindowData pointer
-    // so that the data can be accessed in the layer_update_proc callback
+    // create layer; the layer data holds the WindowData pointer for prv_layer_draw
     data->drawing_layer = layer_create_with_data(bounds, sizeof(WindowData*));
     WindowData **layer_data = (WindowData**)layer_get_data(data->drawing_layer);
     (*layer_data) = data;
@@ -544,10 +497,6 @@ static void prv_window_load(Window *window) {
     action_bar_layer_set_context(data->action_bar, data);
     action_bar_layer_set_click_config_provider(data->action_bar, prv_click_config_provider);
     prv_update_icons(data);
-    if (data->lap_count > SCREEN_MAX_LAPS_BEFORE_SCROLLING && data->epochs_ms[CurrentTime] < 0) {
-      action_bar_layer_set_icon(data->action_bar, BUTTON_ID_UP, data->icon_up);
-      action_bar_layer_set_icon(data->action_bar, BUTTON_ID_DOWN, data->icon_down);
-    }
     action_bar_layer_add_to_window(data->action_bar, window);
 
     // schedule refresh timer
@@ -563,19 +512,15 @@ static void prv_window_load(Window *window) {
 // unload the window
 static void prv_window_unload(Window *window) {
   WindowData *data = (WindowData*)window_get_user_data(window);
-  // free memory
   if (data) {
     // stop the refresh timer (embedded in ChronoKit: the app keeps running after this window closes)
     if (data->app_timer) {
       app_timer_cancel(data->app_timer);
       data->app_timer = NULL;
     }
-    // save persistent storage
     prv_save_persistent_storage(data);
-    // destroy visuals
     action_bar_layer_destroy(data->action_bar);
     layer_destroy(data->drawing_layer);
-    // unload resources
     fonts_unload_custom_font(data->font_small);
     gbitmap_destroy(data->icon_down);
     gbitmap_destroy(data->icon_lap);
@@ -583,7 +528,6 @@ static void prv_window_unload(Window *window) {
     gbitmap_destroy(data->icon_play);
     gbitmap_destroy(data->icon_reset);
     gbitmap_destroy(data->icon_up);
-    // window
     s_data = NULL;
     window_destroy(window);
     free(data);
@@ -598,11 +542,7 @@ static void prv_window_unload(Window *window) {
 // Fenster erstellen und anzeigen (in ChronoKit eingebettet statt eigenem main())
 void stopwatch_window_push(void) {
   Window *window = window_create();
-#ifdef PBL_SDK_3
-  window_set_background_color(window, HIGHLIGHT_COLOR);
-#else
-  window_set_fullscreen(window, true);
-#endif
+  window_set_background_color(window, ZM_COLOR_SURFACE);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = prv_window_load,
     .unload = prv_window_unload,

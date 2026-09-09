@@ -1,12 +1,8 @@
-/*******************************************************************************
- * FILENAME :        main.c
- *
- * DESCRIPTION :
- *      Entry point and main logic for program. Controls everything
- *      of importance that happens.
+/*
+ * Timer module (embedded Core Devices multi-timer app): owns the timer list,
+ * its windows, the periodic refresh and the timeline pin / wakeup handling.
  *
  * AUTHOR :     Eric Phillips        START DATE :    07/10/15
- *
  */
 
 #include <pebble.h>
@@ -18,6 +14,7 @@
 #include "popup_window.h"
 #include "phone.h"
 #include "theme.h"
+#include "common.h"
 
 // constants
 #define COUNTDOWN_TIMER_PERSIST_KEY 72445846
@@ -26,11 +23,6 @@
 #define PERSIST_VERSION_KEY 46134672
 #define COUNTDOWN_TIMERS_MAX 8
 #define COUNTDOWN_TIMER_SNOOZE_DELAY 60000 // milliseconds
-// Kuerzeste zulaessige Dauer. Das Original verlangte 5 s und verwarf kuerzere
-// Eingaben wortlos. 1 s genuegt; 0 s bleibt der Abbruchweg, wenn man den
-// Einstellscreen ohne Eingabe durchklickt.
-#define TIMER_MIN_LENGTH 1000 // milliseconds
-#define TIMELINE_MIN_LENGTH 900000 // milliseconds
 #define INACTIVITY_THRESHOLD 900000 // length of time before refresh throttling in milliseconds
 #define INACTIVE_REFRESH_DELAY 1000 // ms between frames after throttling
 #define REFRESH_DELAY 1000 // ms between periodic redraws
@@ -41,11 +33,7 @@
                                              // in the pins action code
 #define PIN_LAUNCH_ARGS_OPEN 10 // when opened from pin, action code to open timer in detail view
 
-
-/*******************************************************************************
- * MAIN LOCAL VARIABLES
- */
-
+// local variables
 static MenuWindow *s_menu_window = NULL;
 static DetailWindow *s_detail_window = NULL;
 static SettingWindow *s_setting_window = NULL;
@@ -56,6 +44,8 @@ static int32_t s_countdown_timer_id_max = 0;
 static AppTimer *s_app_timer = NULL;
 static int64_t s_last_activity = 0;
 
+// delay until the next redraw: fast while a popup animates, otherwise aligned
+// just after the next second boundary of the closest running timer
 static uint16_t prv_get_next_refresh_delay(void) {
   if (popup_window_get_topmost_window(s_popup_window)) {
     return POPUP_REFRESH_DELAY;
@@ -83,16 +73,9 @@ static uint16_t prv_get_next_refresh_delay(void) {
   return (uint16_t)delay;
 }
 
-
-
-/*
- * decides whether timer "a" should be listed above timer "b"
- *
- * running timers come before paused ones; within each group the most recently
- * used timer (largest last_update) comes first. "Used" means started, paused,
- * or edited -- anything that touches a timer's last_update.
- */
-
+// decides whether timer "a" should be listed above timer "b": running timers
+// come before paused ones; within each group the most recently used timer
+// (largest last_update) comes first. "Used" means started, paused, or edited.
 static bool prv_timer_precedes(CountdownTimer *a, CountdownTimer *b) {
   bool a_running = !countdown_timer_get_paused(a);
   bool b_running = !countdown_timer_get_paused(b);
@@ -102,16 +85,8 @@ static bool prv_timer_precedes(CountdownTimer *a, CountdownTimer *b) {
   return countdown_timer_get_last_update(a) > countdown_timer_get_last_update(b);
 }
 
-
-
-/*
- * sort the timer list: running timers on top (most recently used first), then
- * paused timers (most recently used first)
- *
- * insertion sort is fine here: the list holds at most COUNTDOWN_TIMERS_MAX
- * entries.
- */
-
+// sort the timer list: running timers on top (most recently used first), then
+// paused timers. Insertion sort: at most COUNTDOWN_TIMERS_MAX entries.
 static void prv_sort_timers_by_recency(void) {
   for (uint8_t i = 1; i < s_countdown_timers_count; i++) {
     CountdownTimer *key = s_countdown_timers[i];
@@ -124,17 +99,10 @@ static void prv_sort_timers_by_recency(void) {
   }
 }
 
-
-
-/*
- * promote a just-used timer to the top of its group
- *
- * last_update only has one-second resolution, so several timers touched in the
- * same second compare equal. Moving the touched timer to the front of the array
- * first means the stable sort keeps it ahead of those same-second peers, so the
- * timer the user actually just used ends up on top of its running/paused group.
- */
-
+// promote a just-used timer to the top of its group. last_update only has
+// one-second resolution, so several timers touched in the same second compare
+// equal; moving the touched timer to the front first lets the stable sort keep
+// it ahead of those same-second peers.
 static void prv_promote_timer(CountdownTimer *countdown_timer) {
   int16_t index = countdown_timer_list_get_timer_index(s_countdown_timers,
     s_countdown_timers_count, countdown_timer);
@@ -146,18 +114,12 @@ static void prv_promote_timer(CountdownTimer *countdown_timer) {
   prv_sort_timers_by_recency();
 }
 
-
-
 /*******************************************************************************
  * CALLBACKS
  */
 
-/*
- * AppTimer callback
- *
- * update callback which determines refresh rate
- */
-
+// AppTimer callback: fires expired timers, redraws the visible window and
+// schedules the next refresh
 static void app_timer_callback(void *data) {
   s_app_timer = NULL;
 
@@ -175,11 +137,7 @@ static void app_timer_callback(void *data) {
     popup_window_set_countdown_timer(s_popup_window, countdown_timer);
     popup_window_set_title(s_popup_window, "Zeit ist um!");
     popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
-#ifdef PBL_PLATFORM_APLITE
-    popup_window_set_image(s_popup_window, RESOURCE_ID_IMAGE_ALARM);
-#else
     popup_window_set_pdc(s_popup_window, RESOURCE_ID_ICON_ALARM_CLOCK, true);
-#endif
     popup_window_set_auto_close_duration(s_popup_window, 15000);
     popup_window_add_action_bar(s_popup_window);
     popup_window_push(s_popup_window, true);
@@ -197,31 +155,16 @@ static void app_timer_callback(void *data) {
   if (detail_top) detail_window_refresh(s_detail_window);
   if (popup_top) popup_window_refresh(s_popup_window);
 
-  // check activity
-  int64_t inactivity_duration = countdown_timer_get_epoch_ms() - s_last_activity;
-
-  // schedule next refresh
+  // schedule next refresh; cap the rate when inactive (a visible popup counts as activity)
   uint16_t refresh_rate = prv_get_next_refresh_delay();
-  if (popup_top) {
-    inactivity_duration = 0;
-  }
-  if (refresh_rate == 0) {
-    return;
-  }
-  // cap refresh rate if inactive
-  if (inactivity_duration > INACTIVITY_THRESHOLD) {
-    refresh_rate = (refresh_rate > INACTIVE_REFRESH_DELAY) ? refresh_rate : INACTIVE_REFRESH_DELAY;
+  if (!popup_top && countdown_timer_get_epoch_ms() - s_last_activity > INACTIVITY_THRESHOLD
+      && refresh_rate < INACTIVE_REFRESH_DELAY) {
+    refresh_rate = INACTIVE_REFRESH_DELAY;
   }
   s_app_timer = app_timer_register(refresh_rate, app_timer_callback, NULL);
 }
 
-
-
-/*
- * PopupWindow snooze timer callback
- * snoozes the vibrating timer for one minute
- */
-
+// PopupWindow snooze timer callback: snoozes the vibrating timer for one minute
 static void popup_window_snooze_timer_callback(CountdownTimer *countdown_timer, void *context) {
   countdown_timer_update(countdown_timer, COUNTDOWN_TIMER_SNOOZE_DELAY, false);
   countdown_timer_start(countdown_timer);
@@ -237,28 +180,14 @@ static void popup_window_snooze_timer_callback(CountdownTimer *countdown_timer, 
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * PopupWindow stop timer callback
- * cancels the current timer vibration sequence
- */
-
+// PopupWindow stop timer callback: cancels the current timer vibration sequence
 static void popup_window_stop_timer_callback(void *context) {
-  // pop the window
   popup_window_pop(s_popup_window, true);
-
   // log activity
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * SettingWindow complete callback
- * simple window to create or edit timer durations
- */
-
+// SettingWindow complete callback: creates a new timer or applies the edited duration
 static void setting_window_complete_callback(int64_t duration, void *context) {
   SettingWindow *setting_window = (SettingWindow*)context;
   CountdownTimer *countdown_timer = setting_window_get_timer(setting_window);
@@ -287,7 +216,7 @@ static void setting_window_complete_callback(int64_t duration, void *context) {
     detail_window_push(s_detail_window, true);
     detail_window_deep_refresh(s_detail_window);
 
-    // delete the Timeline pin
+    // push the Timeline pin
     if (countdown_timer_get_duration(countdown_timer) >= TIMELINE_MIN_LENGTH) {
       phone_send_pin(countdown_timer);
     }
@@ -316,28 +245,15 @@ static void setting_window_complete_callback(int64_t duration, void *context) {
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * DetailWindow edit timer callback
- * edit the timer currently in the detail view
- */
-
+// DetailWindow edit timer callback: edit the timer currently in the detail view
 static void detail_window_edit_timer_callback(CountdownTimer *countdown_timer, void *context) {
   setting_window_set_timer(s_setting_window, countdown_timer);
   setting_window_push(s_setting_window, true);
-
   // log activity
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * DetailWindow play pause timer callback
- * plays or pauses the timer currently in the detail view
- */
-
+// DetailWindow play pause timer callback: plays or pauses the timer in the detail view
 static void detail_window_playpause_timer_callback(CountdownTimer *countdown_timer, void *context) {
   if (countdown_timer_get_paused(countdown_timer)) {
     if (countdown_timer_get_current_time(countdown_timer) <= 0) {
@@ -362,18 +278,11 @@ static void detail_window_playpause_timer_callback(CountdownTimer *countdown_tim
   prv_promote_timer(countdown_timer);
   // refresh DetailWindow
   detail_window_deep_refresh(s_detail_window);
-
   // log activity
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * DetailWindow delete timer callback
- * delete the timer currently in the detail view
- */
-
+// DetailWindow delete timer callback: delete the timer currently in the detail view
 static void detail_window_delete_timer_callback(CountdownTimer *countdown_timer, void *context) {
   // delete the Timeline pin
   if (countdown_timer_get_duration(countdown_timer) >= TIMELINE_MIN_LENGTH) {
@@ -397,14 +306,8 @@ static void detail_window_delete_timer_callback(CountdownTimer *countdown_timer,
   // show timer confirmation window
   popup_window_set_title(s_popup_window, "Timer gelöscht");
   popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
-#ifdef PBL_PLATFORM_APLITE
-  popup_window_set_image(s_popup_window, RESOURCE_ID_IMAGE_SHREADER);
-  popup_window_set_auto_close_duration(s_popup_window, 1000);
-#else
   popup_window_set_pdc(s_popup_window, RESOURCE_ID_ICON_DELETED, false);
-  int64_t pdc_duration = popup_window_get_pdc_duration(s_popup_window);
-  popup_window_set_auto_close_duration(s_popup_window, pdc_duration);
-#endif
+  popup_window_set_auto_close_duration(s_popup_window, popup_window_get_pdc_duration(s_popup_window));
   popup_window_remove_action_bar(s_popup_window);
   popup_window_push(s_popup_window, true);
   popup_window_refresh(s_popup_window);
@@ -420,41 +323,22 @@ static void detail_window_delete_timer_callback(CountdownTimer *countdown_timer,
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * MenuWindow get timer callback
- * gets a pointer to a timer at a specific index
- */
-
+// MenuWindow get timer callback: pointer to the timer at a specific index
 static CountdownTimer *menu_window_get_timer_callback(uint8_t index, void *context) {
   if (index < s_countdown_timers_count) {
     return s_countdown_timers[index];
   }
-  // error handling
   APP_LOG(APP_LOG_LEVEL_ERROR, "Attempted to access timer outside array bounds");
   return NULL;
 }
 
-
-
-/*
- * MenuWindow get timer count callback
- * get the total number of timers
- */
-
+// MenuWindow get timer count callback
 static uint8_t menu_window_get_timer_count_callback(void *context) {
   return s_countdown_timers_count;
 }
 
-
-
-/*
- * MenuWindow click callback
- */
-
+// MenuWindow click callback: add a timer on the "+", otherwise open the detailed view
 static void menu_window_click_callback(uint8_t index, void *context) {
-  // add a timer if on the "+", otherwise, open the detailed view
   if (index == 0) {
     setting_window_set_timer(s_setting_window, NULL);
     setting_window_push(s_setting_window, true);
@@ -472,18 +356,13 @@ static void menu_window_click_callback(uint8_t index, void *context) {
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
 /*******************************************************************************
  * INITIALIZE AND DEINITIALIZE
  */
 
-/*
- * initialize the timer module (embedded in ChronoKit)
- * loads state and creates all windows except the menu, which is created
- * lazily when the user opens the timer section (menu_window_create pushes)
- */
-
+// initialize the timer module (embedded in ChronoKit): loads state and creates
+// all windows except the menu, which is created lazily when the user opens the
+// timer section (menu_window_create pushes)
 void timer_app_init(void) {
   // connect to phone
   phone_connect();
@@ -531,13 +410,8 @@ void timer_app_init(void) {
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * open the timer section: push the timer list (and the setting screen
- * on top when there are no timers yet, like the original app at launch)
- */
-
+// open the timer section: push the timer list (and the setting screen on top
+// when there are no timers yet, like the original app at launch)
 void timer_app_open(void) {
   if (s_menu_window == NULL) {
     MenuWindowCallbacks menu_callbacks = {
@@ -562,13 +436,8 @@ void timer_app_open(void) {
   s_last_activity = countdown_timer_get_epoch_ms();
 }
 
-
-
-/*
- * handle special launch reasons (wakeup from an expired timer, timeline pin)
- * returns true if the launch was handled and the timer UI was opened
- */
-
+// handle special launch reasons (wakeup from an expired timer, timeline pin);
+// returns true if the launch was handled and the timer UI was opened
 bool timer_app_handle_launch(void) {
   switch (launch_reason()) {
     case APP_LAUNCH_WAKEUP:
@@ -604,7 +473,7 @@ bool timer_app_get_glance(char *buff_glance, size_t size, time_t *expiration_tim
 
   if (countdown_timer != NULL) {
     // laufender Timer: der Glance zaehlt die Restzeit selbst herunter
-    *expiration_time = time(NULL) + countdown_timer_get_current_time(countdown_timer) / 1000;
+    *expiration_time = time(NULL) + countdown_timer_get_current_time(countdown_timer) / MSEC_IN_SEC;
     snprintf(buff_glance, size, "{time_until(%ld)|format('%%fT')}", *expiration_time);
     return true;
   }
@@ -622,11 +491,7 @@ bool timer_app_get_glance(char *buff_glance, size_t size, time_t *expiration_tim
   return false;
 }
 
-
-/*
- * deinitialize the timer module
- */
-
+// deinitialize the timer module: persist state, schedule the wakeup, destroy windows
 void timer_app_deinit(void) {
   // cancel the timer if it is still registered
   if (s_app_timer != NULL) {
@@ -644,7 +509,7 @@ void timer_app_deinit(void) {
   CountdownTimer *countdown_timer = countdown_timer_list_get_closest_timer(s_countdown_timers,
     s_countdown_timers_count);
   if (countdown_timer != NULL) {
-    time_t timestamp = time(NULL) + countdown_timer_get_current_time(countdown_timer) / 1000;
+    time_t timestamp = time(NULL) + countdown_timer_get_current_time(countdown_timer) / MSEC_IN_SEC;
     // add one second to ensure it opens straight to the PopupWindow
     wakeup_schedule(timestamp + 1, 0, true);
   }
