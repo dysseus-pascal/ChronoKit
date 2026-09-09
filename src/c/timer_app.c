@@ -171,7 +171,7 @@ static void app_timer_callback(void *data) {
     // show timer confirmation window
     popup_window_set_countdown_timer(s_popup_window, countdown_timer);
     popup_window_set_title(s_popup_window, "Zeit ist um!");
-    popup_window_set_highlight_color(s_popup_window, ZM_COLOR_ACCENT);
+    popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
 #ifdef PBL_PLATFORM_APLITE
     popup_window_set_image(s_popup_window, RESOURCE_ID_IMAGE_ALARM);
 #else
@@ -393,7 +393,7 @@ static void detail_window_delete_timer_callback(CountdownTimer *countdown_timer,
 
   // show timer confirmation window
   popup_window_set_title(s_popup_window, "Timer gelöscht");
-  popup_window_set_highlight_color(s_popup_window, ZM_COLOR_ACCENT);
+  popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
 #ifdef PBL_PLATFORM_APLITE
   popup_window_set_image(s_popup_window, RESOURCE_ID_IMAGE_SHREADER);
   popup_window_set_auto_close_duration(s_popup_window, 1000);
@@ -504,7 +504,7 @@ void timer_app_init(void) {
     .delete_timer = detail_window_delete_timer_callback,
   };
   s_detail_window = detail_window_create(detail_callbacks);
-  detail_window_set_highlight_color(s_detail_window,ZM_COLOR_ACCENT);
+  detail_window_set_highlight_color(s_detail_window, ZM_COLOR_FILL);
 
   // create setting window
   SettingWindowCallbacks setting_callbacks = {

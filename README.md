@@ -1,11 +1,19 @@
 # ChronoKit
 
-Zeitmess-App für die Pebble Time 2 (Plattform «emery»). Kombiniert die beiden
+Zeitmess-App für Pebble. Kombiniert die beiden
 offiziellen Pebble-Apps von Core Devices in einer App, erreichbar über ein
 kleines Startmenü:
 
 - **Stoppuhr** — Port von [coredevices/pebble-stopwatch](https://github.com/coredevices/pebble-stopwatch)
 - **Timer** — Port von [coredevices/pebble-timer](https://github.com/coredevices/pebble-timer)
+
+## Unterstützte Geräte
+
+| Plattform | Display | Besonderheit |
+|---|---|---|
+| `emery` | 200×228, Farbe, eckig | Referenzplattform (Pebble Time 2) |
+| `flint` | 144×168, **schwarz-weiss**, eckig | Theme fällt auf Schwarz/Weiss zurück, halbes Speicherbudget |
+| `gabbro` | 260×260, Farbe, **rund** | Auswahl mittig, Fortschritt als radiale Füllung |
 
 ## Bilder
 
@@ -17,7 +25,17 @@ kleines Startmenü:
 |:--:|:--:|:--:|
 | ![Fortschritt als steigende Füllung](screenshots/05-timer-detail.png) | ![Ein laufender und ein pausierter Timer](screenshots/06-timer-liste.png) | ![Alarmfenster mit Schlummern und Verwerfen](screenshots/07-alarm.png) |
 
-Aufnahmen aus dem Emulator in nativer Auflösung 200×228.
+Dieselben Screens auf den beiden anderen Plattformen:
+
+| flint (s/w, 144×168) | flint | gabbro (rund, 260×260) | gabbro |
+|:--:|:--:|:--:|:--:|
+| ![Stoppuhr auf flint](screenshots/flint-stoppuhr.png) | ![Timer-Detail auf flint](screenshots/flint-timer-detail.png) | ![Stoppuhr auf gabbro](screenshots/gabbro-stoppuhr.png) | ![Timer-Detail auf gabbro](screenshots/gabbro-timer-detail.png) |
+
+Auf flint ist die Fortschrittsfüllung weiss, sonst stünde die schwarze Zeit auf
+schwarzem Grund. Sichtbar bleibt der Fortschritt dort durch die Linie an der
+Füllkante, die auf Farbgeräten zusätzlich die Grenze zwischen den Grüntönen schärft.
+
+Alle Aufnahmen stammen aus dem Emulator in nativer Auflösung der jeweiligen Plattform.
 
 ## Bedienung
 
@@ -50,10 +68,16 @@ Aufnahmen aus dem Emulator in nativer Auflösung 200×228.
 
 Alle Farben sind in `src/c/theme.h` zentralisiert:
 
-- `ZM_COLOR_ACCENT` = GColorJaegerGreen (#00AA55): Menü-Hervorhebung, aktives Eingabefeld,
-  Fortschritts-Füllung im Timer-Detail, Vollbild des «Zeit ist um!»-Popups
+- `ZM_COLOR_ACCENT` = GColorJaegerGreen (#00AA55): Menü-Hervorhebung und aktives Eingabefeld
+- `ZM_COLOR_FILL` = GColorJaegerGreen: grossflächige Füllungen, die fremde Schrift tragen,
+  also der Fortschritt im Timer-Detail und der Hintergrund der Popups
 - `ZM_COLOR_SURFACE` = GColorMintGreen (#AAFFAA): getönte Flächen (Stoppuhr, oberer Teil des Timer-Details)
-- `ZM_COLOR_ON_ACCENT` = `gcolor_legible_over(ACCENT)`: Schriftfarbe auf Akzent (bei JaegerGreen Schwarz)
+- `ZM_COLOR_ON_ACCENT` / `ZM_COLOR_ON_SURFACE` = `gcolor_legible_over(...)`: Schriftfarbe darauf
+
+`ACCENT` und `FILL` sind auf Farbgeräten identisch und unterscheiden sich nur im
+Schwarz-Weiss-Rückfall: `ACCENT` wird zu Schwarz, weil seine Schrift über
+`ON_ACCENT` mitzieht, `FILL` dagegen zu Weiss, weil die Schrift darauf immer
+schwarz ist. Genau daran krankte der erste Anlauf für flint.
 
 Andere Grüntöne? Nur die beiden Defines ändern (Pebble-Palette: IslamicGreen, MayGreen, DarkGreen,
 ScreaminGreen, MediumSpringGreen ...). Icons, PDC-Animationen und App-Icon sind rein schwarz/weiss

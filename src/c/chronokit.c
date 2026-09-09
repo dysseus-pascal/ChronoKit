@@ -33,13 +33,23 @@ static void launcher_window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
 
+  // Auf runden Displays nutzt das Menue die volle Flaeche und stellt die
+  // Auswahl mittig, sonst wird es unter der Statusleiste eingehaengt.
+  // Das entspricht dem Verhalten der Timer-Liste.
+#ifdef PBL_ROUND
+  s_launcher_menu = menu_layer_create(b);
+#else
   s_launcher_menu = menu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, b.size.w,
                                             b.size.h - STATUS_BAR_LAYER_HEIGHT));
+#endif
   menu_layer_set_callbacks(s_launcher_menu, NULL, (MenuLayerCallbacks) {
     .get_num_rows = launcher_num_rows,
     .draw_row = launcher_draw_row,
     .select_click = launcher_select,
   });
+#ifdef PBL_ROUND
+  menu_layer_set_center_focused(s_launcher_menu, true);
+#endif
   menu_layer_set_highlight_colors(s_launcher_menu, ZM_COLOR_ACCENT,
                                   ZM_COLOR_ON_ACCENT);
   menu_layer_set_click_config_onto_window(s_launcher_menu, window);

@@ -100,6 +100,15 @@ static void layer_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, detail_window->highlight_color);
   graphics_fill_rect(ctx, GRect(0, water_level, layer_get_bounds(layer).size.w,
     layer_get_bounds(layer).size.h - water_level), 1, GCornerNone);
+  // Kante der Fuellung markieren. Auf S/W-Geraeten ist die Fuellung weiss und
+  // damit unsichtbar, dort ist diese Linie die einzige Fortschrittsanzeige.
+  // Auf Farbgeraeten schaerft sie die sonst weiche Grenze zwischen den
+  // beiden Gruentoenen.
+  if (water_level > 0 && water_level < layer_get_bounds(layer).size.h) {
+    graphics_context_set_fill_color(ctx, ZM_COLOR_ON_SURFACE);
+    graphics_fill_rect(ctx, GRect(0, water_level, layer_get_bounds(layer).size.w, 2),
+      0, GCornerNone);
+  }
 #endif
 }
 
