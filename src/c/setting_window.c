@@ -39,7 +39,7 @@
 
 #define REPEATING_CLICK_THRESHOLD 10
 
-#define TIMER_MINIMUM_DURATION 5000 // milliseconds
+#define TIMER_MINIMUM_DURATION 1000 // milliseconds, siehe TIMER_MIN_LENGTH in timer_app.c
 #define TIMELINE_MINIMUM_DURATION 900000 // milliseconds
 
 

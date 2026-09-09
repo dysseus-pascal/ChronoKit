@@ -26,7 +26,10 @@
 #define PERSIST_VERSION_KEY 46134672
 #define COUNTDOWN_TIMERS_MAX 8
 #define COUNTDOWN_TIMER_SNOOZE_DELAY 60000 // milliseconds
-#define TIMER_MIN_LENGTH 5000 // milliseconds
+// Kuerzeste zulaessige Dauer. Das Original verlangte 5 s und verwarf kuerzere
+// Eingaben wortlos. 1 s genuegt; 0 s bleibt der Abbruchweg, wenn man den
+// Einstellscreen ohne Eingabe durchklickt.
+#define TIMER_MIN_LENGTH 1000 // milliseconds
 #define TIMELINE_MIN_LENGTH 900000 // milliseconds
 #define INACTIVITY_THRESHOLD 900000 // length of time before refresh throttling in milliseconds
 #define INACTIVE_REFRESH_DELAY 1000 // ms between frames after throttling

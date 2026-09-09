@@ -74,7 +74,8 @@ Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
 
 **Timer** (Mehrfach-Timer wie im Original)
 - Liste mit «+» zum Anlegen; pro Timer Fortschrittsbalken und Play/Pause-Symbol
-- «Timer stellen»: Stunden/Minuten/Sekunden-Felder (Oben/Unten ändern, Mitte weiter)
+- «Timer stellen»: Stunden/Minuten/Sekunden-Felder (Oben/Unten ändern, Mitte weiter);
+  kürzeste Dauer 1 Sekunde, mit 0 bricht man ab
 - Detailansicht: grüne Füllung zeigt den Fortschritt; Action-Bar: Stift = Bearbeiten,
   Play/Pause, Papierkorb = Löschen
 - Bei Ablauf: Vibration + animiertes «Zeit ist um!»-Popup mit Schlummern (1 Min)
@@ -111,7 +112,9 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
   gelegentlich um knapp eine Sekunde zurücksprang)
 - `src/c/timer_app.c` (ehem. `main.c`) + `menu/detail/setting/popup_window.*`,
   `selection_layer.*`, `countdown_timer.*`, `phone.*` — offizielle Timer-App
-  (angepasst: Timer-Liste wird erst beim Öffnen gepusht, deutsche Texte)
+  (angepasst: Timer-Liste wird erst beim Öffnen gepusht, deutsche Texte, und die
+  kürzeste Timerdauer von 5 auf 1 Sekunde gesenkt -- kürzere Eingaben wurden
+  vorher wortlos verworfen)
 - `resources/` — LECO-Fonts, Action-Bar-Icons, PDC-Animationen aus den Originalen
 
 ## Build (WSL, siehe auch Projekt-Memory)
