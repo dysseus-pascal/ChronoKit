@@ -101,6 +101,14 @@ Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
   `/v1/user/pins` selbst abfängt und den Pin lokal anlegt — der Aufruf verlässt
   das Telefon also ohnehin nicht. Ohne diesen Abfang (iPhone, klassische App,
   oder Einstellung «Emulate Timeline Webservice» aus) ging er bisher ins Leere.
+- Seit 1.2.2 baut `makeTimerPin()` für jede Nachricht ein **eigenes**
+  Pin-Objekt. Vorher war es ein einziges Modul-Objekt, das pro AppMessage
+  umgeschrieben wurde — gesendet wird aber erst im asynchronen
+  `getTimelineToken`-Callback. Startete man zwei Timer schnell hintereinander,
+  trugen alle Anfragen den Inhalt der letzten Nachricht, während die URL noch
+  die richtige ID hatte: Pin 22 bekam Titel, Restzeit und Launch-Code von
+  Pin 11. `tools/pkjs_race_test.js` erzwingt genau diesen Ablauf und hält ihn
+  fest (`node tools/pkjs_race_test.js src/pkjs/index.js`).
 
 **Zeitzone** (eigener Screen, kein Port)
 

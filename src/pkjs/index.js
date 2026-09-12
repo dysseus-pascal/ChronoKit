@@ -1,27 +1,53 @@
 // ********** Timeline ********** //
-// "Timer abgelaufen" pin; id, time, subtitle and launchCode are set per timer
-var timerPIN = {
-  "id": "",
-  "time": 0,
-  "layout": {
-    "type": "weatherPin",
-    "title": "Timer abgelaufen",
-    "subtitle": "50:00",
-    "tinyIcon": "system://images/ALARM_CLOCK",
-    "largeIcon": "system://images/ALARM_CLOCK",
-    "locationName": " ",
-    // Muss zu ZM_COLOR_ACCENT in src/c/theme.h passen (handgepflegte Kopie)
-    "backgroundColor": "#00AA55",
-    "foregroundColor": "#000000"
-  },
-  "actions": [
-    {
-      "title": "Timer oeffnen",
-      "type": "openWatchApp",
-      "launchCode": 10
-    }
-  ]
-};
+// "Timer abgelaufen"-Pin. Fuer JEDEN Aufruf wird ein eigenes Objekt gebaut.
+//
+// Vorher stand hier ein einziges Modul-Objekt, das der AppMessage-Handler pro
+// Nachricht umgeschrieben hat. Gesendet wird aber erst im asynchronen
+// getTimelineToken-Callback: startet man zwei Timer schnell hintereinander,
+// trugen beide Rumpfdaten den Inhalt des ZWEITEN, waehrend die URL des ersten
+// noch dessen eigene ID trug. Pin 1 bekam also Titel, Restzeit und Launch-Code
+// von Pin 2. Dasselbe galt fuer die Protokollzeile in der Antwort, die die ID
+// ebenfalls erst spaeter aus dem gemeinsamen Objekt las.
+function makeTimerPin(id, totalTimeSec, durationSec) {
+  // Untertitel = Gesamtdauer als HH:MM
+  var tot = totalTimeSec / 60;
+  var hr = Math.floor(tot / 60);
+  var min = Math.floor(tot % 60);
+  if (hr < 10) hr = "0" + hr;
+  if (min < 10) min = "0" + min;
+
+  // Nur ein anzulegender Pin braucht eine Zeit; beim Loeschen bleibt sie 0.
+  var time = 0;
+  if (durationSec > 0) {
+    var tDate = new Date();
+    tDate.setSeconds(tDate.getSeconds() + durationSec);
+    time = tDate.toISOString();
+  }
+
+  return {
+    "id": id,
+    "time": time,
+    "layout": {
+      "type": "weatherPin",
+      "title": "Timer abgelaufen",
+      "subtitle": hr + ":" + min,
+      "tinyIcon": "system://images/ALARM_CLOCK",
+      "largeIcon": "system://images/ALARM_CLOCK",
+      "locationName": " ",
+      // Muss zu ZM_COLOR_ACCENT in src/c/theme.h passen (handgepflegte Kopie)
+      "backgroundColor": "#00AA55",
+      "foregroundColor": "#000000"
+    },
+    "actions": [
+      {
+        "title": "Timer oeffnen",
+        "type": "openWatchApp",
+        // launch code = timer id * 100 + Aktion (10 = oeffnen)
+        "launchCode": id * 100 + 10
+      }
+    ]
+  };
+}
 
 // Timeline-Endpunkt. Der alte Host timeline-api.getpebble.com ist tot - er
 // loest auf 0.0.0.0 auf und antwortet nicht mehr; timeline-api.rebble.io lebt.
@@ -33,19 +59,23 @@ var timerPIN = {
 var TIMELINE_API = 'https://timeline-api.rebble.io/v1/user/pins/';
 
 // Send pin to the Pebble timeline API; type is 'PUT' (insert) or 'DELETE'.
+// ID und Rumpf werden SOFORT festgehalten, nicht erst im Token-Callback - so
+// kann kein spaeterer Aufruf den Inhalt dieses Aufrufs mehr veraendern.
 function timelineRequest(pin, type, callback) {
+  var id = pin.id;
+  var body = JSON.stringify(pin);
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
     console.log('timeline: response received: ' + this.responseText);
-    callback(this.responseText);
+    callback(id, this.responseText);
   };
-  xhr.open(type, TIMELINE_API + pin.id);
+  xhr.open(type, TIMELINE_API + id);
 
   Pebble.getTimelineToken(function (token) {
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('X-User-Token', '' + token);
-    xhr.send(JSON.stringify(pin));
-    console.log('timeline: request sent.');
+    xhr.send(body);
+    console.log('timeline: request sent (' + id + ').');
   }, function (error) { console.log('timeline: error getting timeline token: ' + error); });
 }
 
@@ -57,27 +87,17 @@ Pebble.addEventListener('appmessage', function(e) {
   // timeline needs SDK 3.0+
   if (typeof Pebble.getTimelineToken != 'function') return;
 
-  timerPIN.id = e.payload.KEY_UNIQUEID.toString();
-  // subtitle = total time as HH:MM
-  var tot = e.payload.KEY_TOTAL_TIME / 60;
-  var hr = Math.floor(tot / 60);
-  var min = Math.floor(tot % 60);
-  if (hr < 10) hr = "0" + hr;
-  if (min < 10) min = "0" + min;
-  timerPIN.layout.subtitle = hr + ":" + min;
-  // launch code = timer id * 100 + action (10 = open)
-  timerPIN.actions[0].launchCode = timerPIN.id * 100 + 10;
+  var duration = e.payload.KEY_DURATION;
+  var pin = makeTimerPin(e.payload.KEY_UNIQUEID.toString(),
+                         e.payload.KEY_TOTAL_TIME, duration);
 
-  if (e.payload.KEY_DURATION > 0) {
-    var tDate = new Date();
-    tDate.setSeconds(tDate.getSeconds() + e.payload.KEY_DURATION);
-    timerPIN.time = tDate.toISOString();
-    timelineRequest(timerPIN, 'PUT', function (responseText) {
-      console.log('Pin Sent Result (' + timerPIN.id + '): ' + responseText);
+  if (duration > 0) {
+    timelineRequest(pin, 'PUT', function (id, responseText) {
+      console.log('Pin Sent Result (' + id + '): ' + responseText);
     });
   } else {
-    timelineRequest(timerPIN, 'DELETE', function (responseText) {
-      console.log('Pin Deleted Result (' + timerPIN.id + '): ' + responseText);
+    timelineRequest(pin, 'DELETE', function (id, responseText) {
+      console.log('Pin Deleted Result (' + id + '): ' + responseText);
     });
   }
 });
