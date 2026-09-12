@@ -23,6 +23,15 @@ var timerPIN = {
   ]
 };
 
+// Timeline-Endpunkt. Der alte Host timeline-api.getpebble.com ist tot - er
+// loest auf 0.0.0.0 auf und antwortet nicht mehr; timeline-api.rebble.io lebt.
+// Auf Android faellt das bisher nicht auf, weil die Telefon-App von Core
+// Devices BEIDE Hosts unter /v1/user/pins selbst abfaengt und den Pin lokal
+// anlegt (RemoteTimelineEmulator, standardmaessig an). Ohne diesen Abfang -
+// auf dem iPhone, mit der klassischen App, oder wenn die Einstellung
+// "Emulate Timeline Webservice" aus ist - ging der Aufruf bisher ins Leere.
+var TIMELINE_API = 'https://timeline-api.rebble.io/v1/user/pins/';
+
 // Send pin to the Pebble timeline API; type is 'PUT' (insert) or 'DELETE'.
 function timelineRequest(pin, type, callback) {
   var xhr = new XMLHttpRequest();
@@ -30,7 +39,7 @@ function timelineRequest(pin, type, callback) {
     console.log('timeline: response received: ' + this.responseText);
     callback(this.responseText);
   };
-  xhr.open(type, 'https://timeline-api.getpebble.com/v1/user/pins/' + pin.id);
+  xhr.open(type, TIMELINE_API + pin.id);
 
   Pebble.getTimelineToken(function (token) {
     xhr.setRequestHeader('Content-Type', 'application/json');

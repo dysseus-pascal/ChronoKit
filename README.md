@@ -95,6 +95,12 @@ Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
 - Bei Ablauf: Vibration + animiertes «Zeit ist um!»-Popup mit Schlummern (1 Min)
   und Verwerfen — auch bei geschlossener App (Wakeup)
 - Bis 8 Timer; Timer ≥ 15 Min erzeugen einen Timeline-Pin (via Handy-App)
+- Der Pin geht seit 1.2.1 an `timeline-api.rebble.io`; der alte Host
+  `timeline-api.getpebble.com` ist tot (löst auf 0.0.0.0 auf). Aufgefallen war
+  das lange nicht, weil die Telefon-App von Core Devices **beide** Hosts unter
+  `/v1/user/pins` selbst abfängt und den Pin lokal anlegt — der Aufruf verlässt
+  das Telefon also ohnehin nicht. Ohne diesen Abfang (iPhone, klassische App,
+  oder Einstellung «Emulate Timeline Webservice» aus) ging er bisher ins Leere.
 
 **Zeitzone** (eigener Screen, kein Port)
 
