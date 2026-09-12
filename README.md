@@ -6,6 +6,8 @@ kleines Startmenü:
 
 - **Stoppuhr** — Port von [coredevices/pebble-stopwatch](https://github.com/coredevices/pebble-stopwatch)
 - **Timer** — Port von [coredevices/pebble-timer](https://github.com/coredevices/pebble-timer)
+- **Zeitzone** — eigener Screen: zeigt die aktuell gesetzten Werte der Uhr und
+  merkt sich auf Wunsch die jetzige Zone als Heimatzeit
 
 ## Unterstützte Geräte
 
@@ -27,6 +29,10 @@ kleines Startmenü:
 |:--:|:--:|:--:|
 | ![Timer-Detail auf emery](screenshots/emery/05-timer-detail.png) | ![Timer-Liste auf emery](screenshots/emery/06-timer-liste.png) | ![Alarm auf emery](screenshots/emery/07-alarm.png) |
 
+| Zeitzone, nichts gemerkt | Zeitzone, Heimat gesetzt |
+|:--:|:--:|
+| ![Zeitzone auf emery](screenshots/emery/08-zeitzone.png) | ![Zeitzone daheim auf emery](screenshots/emery/09-zeitzone-daheim.png) |
+
 ### flint (144×168, schwarz-weiss, eckig)
 
 | Startmenü | Stoppuhr | Pausiert | Timer stellen |
@@ -36,6 +42,10 @@ kleines Startmenü:
 | Timer-Detail | Timer-Liste | Alarm |
 |:--:|:--:|:--:|
 | ![Timer-Detail auf flint](screenshots/flint/05-timer-detail.png) | ![Timer-Liste auf flint](screenshots/flint/06-timer-liste.png) | ![Alarm auf flint](screenshots/flint/07-alarm.png) |
+
+| Zeitzone, nichts gemerkt | Zeitzone, Heimat gesetzt |
+|:--:|:--:|
+| ![Zeitzone auf flint](screenshots/flint/08-zeitzone.png) | ![Zeitzone daheim auf flint](screenshots/flint/09-zeitzone-daheim.png) |
 
 Auf flint ist die Fortschrittsfüllung weiss, sonst stünde die schwarze Zeit auf
 schwarzem Grund. Sichtbar bleibt der Fortschritt durch die Linie an der Füllkante,
@@ -50,6 +60,10 @@ die auf Farbgeräten zusätzlich die Grenze zwischen den Grüntönen schärft.
 | Timer-Detail | Timer-Liste | Alarm |
 |:--:|:--:|:--:|
 | ![Timer-Detail auf gabbro](screenshots/gabbro/05-timer-detail.png) | ![Timer-Liste auf gabbro](screenshots/gabbro/06-timer-liste.png) | ![Alarm auf gabbro](screenshots/gabbro/07-alarm.png) |
+
+| Zeitzone, nichts gemerkt | Zeitzone, Heimat gesetzt |
+|:--:|:--:|
+| ![Zeitzone auf gabbro](screenshots/gabbro/08-zeitzone.png) | ![Zeitzone daheim auf gabbro](screenshots/gabbro/09-zeitzone-daheim.png) |
 
 Alle Aufnahmen stammen aus dem Emulator in nativer Auflösung der jeweiligen
 Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
@@ -82,6 +96,49 @@ Plattform, aufgenommen mit demselben Ablauf und denselben Runden-Abständen.
   und Verwerfen — auch bei geschlossener App (Wakeup)
 - Bis 8 Timer; Timer ≥ 15 Min erzeugen einen Timeline-Pin (via Handy-App)
 
+**Zeitzone** (eigener Screen, kein Port)
+
+Oben stehen die **aktuell gesetzten Werte** der Uhr: Datum, UTC-Versatz, die
+Ortszeit gross in LECO und der Ortsname. Unten die gemerkte **Heimatzeit** mit
+dem Versatz zum aktuellen Standort. Der Untertitel der Menüzeile trägt die
+Information schon selbst — «Heimatzeit merken», «Daheim: Zürich» oder unterwegs
+«Zürich 21:37».
+
+| Zustand | Oben | Mitte | Unten |
+|---|---|---|---|
+| Zone unbekannt | — | — | — |
+| keine Heimat | — | merken | — |
+| daheim | — | auffrischen | kurz: Hinweis · **lang: löschen** |
+| unterwegs | +1 h | kurz: Hinweis · **lang: ersetzen** | −1 h |
+
+Zwei Regeln stecken darin: ein **kurzer Druck ist nirgends zerstörend**, und
+**gelöscht wird nur daheim** — unterwegs liesse sich die Heimatzone nicht
+wiederherstellen, und ein zu lang gehaltenes «Unten» beim Korrigieren würde
+genau das vernichten, wofür man den Screen geöffnet hat. Wo kein langer Druck
+vorgesehen ist, wirkt er wie der kurze.
+
+Ist es daheim **Nacht** (22–07 Uhr), wird der untere Block invertiert. Das
+beantwortet «darf ich jetzt anrufen» ohne ein Wort.
+
+**Sommerzeit.** Gespeichert wird der effektive UTC-Versatz im Moment des
+Merkens — `tm_gmtoff` enthält die Sommerzeit bereits. Steht man wieder in der
+Heimatzone, zieht die App den Wert stillschweigend nach; daheim stimmt er also
+immer. Fällt der Umstellungstermin dagegen **in eine laufende Reise**, friert
+der Versatz ein und die Heimatzeit geht eine Stunde falsch. Das ist keine
+Nachlässigkeit: die Firmware hält nur das DST-Regelpaar der *aktuell gesetzten*
+Zone, `timezone_database_*` ist nicht ans SDK exportiert, und eine fremde Zone
+lässt sich auf der Uhr deshalb nicht auflösen. Dagegen gibt es die Handkorrektur
+±1 h auf Oben/Unten (markiert das Delta mit `*`, langes Oben schaltet sie aus)
+und ab 90 Tagen ohne Auffrischung ein `?` am Delta.
+
+Eine Einschränkung noch: kennt die Firmware die Region nicht, liefert sie statt
+`Europe/Zurich` den Ersatznamen `UTC+2`. Der ändert sich bei der Zeitumstellung
+mit, und dann erkennt die App die Heimat nicht wieder — sie kann «gleicher Ort,
+andere Jahreszeit» nicht von «eine Stunde westlich gereist» unterscheiden. Auf
+einer mit dem Telefon gekoppelten Uhr kommt der Regionsname; im Emulator immer
+der Ersatzname. Aus demselben Grund zeigen die Bilder oben `UTC+2` statt
+`Zürich`.
+
 ## Farbschema (Grün)
 
 Alle Farben sind in `src/c/theme.h` zentralisiert:
@@ -105,7 +162,11 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
 
 - `src/c/theme.h` — zentrale Farbpalette (siehe Farbschema oben)
 - `src/c/common.h` — gemeinsame Zeiteinheiten, vorher in vier Dateien einzeln definiert
-- `src/c/chronokit.c` — Launcher-Menü, bindet beide Module ein
+- `src/c/chronokit.c` — Launcher-Menü, bindet alle drei Module ein
+- `src/c/timezone_window.*` — eigener Zeitzonen-Screen (kein Port). Zeichnet alles
+  selbst, nutzt die LECO-Pfade aus `rendering.c` und die vorhandenen
+  Action-Bar-Symbole, braucht also keine neue Ressource. Die Heimatzeit liegt
+  unter den persist-Schlüsseln 200–204
 - `src/c/stopwatch.c`, `rendering.*` — offizielle Stoppuhr (angepasst: kein eigenes `main`,
   Rundenzeit als einfache Differenz statt Modulo-Rechnung, `WindowData` wird beim
   Anlegen genullt, und `prv_get_epoch_ms` unterdrückt kleine Rückwärtssprünge:
@@ -155,9 +216,10 @@ bereinigt, siehe Abschnitt Struktur; die Logik ist unveraendert):
   [coredevices/pebble-timer](https://github.com/coredevices/pebble-timer), urspruenglich
   von Eric Phillips
 
-Eigene Anteile: `chronokit.c` (Launcher), `theme.h` (Farbpalette), `common.h`, die
-deutschen Texte, die im Abschnitt Struktur genannten Korrekturen und die Kürzung und
-Bereinigung ab 1.1.2. Der gekürzte Code bleibt eine Bearbeitung der Originale.
+Eigene Anteile: `chronokit.c` (Launcher), `timezone_window.*` (Zeitzonen-Screen, ab 1.2.0),
+`theme.h` (Farbpalette), `common.h`, die deutschen Texte, die im Abschnitt Struktur
+genannten Korrekturen und die Kürzung und Bereinigung ab 1.1.2. Der gekürzte Code bleibt
+eine Bearbeitung der Originale.
 
 **Lizenzlage:** Beide Quell-Repositories sind ohne Lizenzdatei veroeffentlicht. Eine
 ausdrueckliche Nutzungsrechtseinraeumung fehlt daher, und dieses Repository kann fuer den

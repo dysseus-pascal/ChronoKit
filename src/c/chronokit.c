@@ -1,8 +1,10 @@
 // ChronoKit: kombiniert die offiziellen Pebble-Apps Stopwatch und Timer
 // (Core Devices, github.com/coredevices) hinter einem kleinen Launcher.
+// Dritte Zeile ist der eigene Zeitzonen-Screen.
 #include <pebble.h>
 #include "stopwatch.h"
 #include "timer_app.h"
+#include "timezone_window.h"
 #include "theme.h"
 
 static Window *s_launcher_window;
@@ -10,22 +12,39 @@ static MenuLayer *s_launcher_menu;
 static StatusBarLayer *s_status_bar;
 
 static uint16_t launcher_num_rows(MenuLayer *ml, uint16_t section, void *ctx) {
-  return 2;
+  return 3;
 }
 
 static void launcher_draw_row(GContext *ctx, const Layer *cell, MenuIndex *idx, void *data) {
   if (idx->row == 0) {
     menu_cell_basic_draw(ctx, cell, "Stoppuhr", "Runden & Zwischenzeit", NULL);
-  } else {
+  } else if (idx->row == 1) {
     menu_cell_basic_draw(ctx, cell, "Timer", "Countdown mit Alarm", NULL);
+  } else {
+    // static, weil menu_cell_basic_draw den String nicht kopiert. Hoechstens
+    // einmal je Sekunde neu rechnen: der Untertitel kostet Zeitzonen- und
+    // Persist-Zugriffe, und waehrend einer Scroll-Animation wird die Zeile
+    // viele Male je Sekunde gezeichnet. Ein eigener Takt waere dafuer zu viel -
+    // tick_timer_service ist eine globale Einzelanmeldung und gehoert dem
+    // Zeitzonen-Screen, solange er offen ist.
+    static char s_tz_sub[32];
+    static time_t s_tz_sub_at;
+    const time_t now = time(NULL);
+    if (s_tz_sub[0] == '\0' || now != s_tz_sub_at) {
+      s_tz_sub_at = now;
+      timezone_get_launcher_subtitle(s_tz_sub, sizeof(s_tz_sub));
+    }
+    menu_cell_basic_draw(ctx, cell, "Zeitzone", s_tz_sub, NULL);
   }
 }
 
 static void launcher_select(MenuLayer *ml, MenuIndex *idx, void *ctx) {
   if (idx->row == 0) {
     stopwatch_window_push();
-  } else {
+  } else if (idx->row == 1) {
     timer_app_open();
+  } else {
+    timezone_window_push();
   }
 }
 
