@@ -5,6 +5,7 @@
 #include "stopwatch.h"
 #include "timer_app.h"
 #include "timezone_window.h"
+#include "strings.h"
 #include "theme.h"
 
 static Window *s_launcher_window;
@@ -17,9 +18,9 @@ static uint16_t launcher_num_rows(MenuLayer *ml, uint16_t section, void *ctx) {
 
 static void launcher_draw_row(GContext *ctx, const Layer *cell, MenuIndex *idx, void *data) {
   if (idx->row == 0) {
-    menu_cell_basic_draw(ctx, cell, "Stoppuhr", "Runden & Zwischenzeit", NULL);
+    menu_cell_basic_draw(ctx, cell, S(STR_LAUNCHER_STOPWATCH), S(STR_LAUNCHER_STOPWATCH_SUB), NULL);
   } else if (idx->row == 1) {
-    menu_cell_basic_draw(ctx, cell, "Timer", "Countdown mit Alarm", NULL);
+    menu_cell_basic_draw(ctx, cell, S(STR_LAUNCHER_TIMER), S(STR_LAUNCHER_TIMER_SUB), NULL);
   } else {
     // static, weil menu_cell_basic_draw den String nicht kopiert. Hoechstens
     // einmal je Sekunde neu rechnen: der Untertitel kostet Zeitzonen- und
@@ -32,9 +33,13 @@ static void launcher_draw_row(GContext *ctx, const Layer *cell, MenuIndex *idx, 
     const time_t now = time(NULL);
     if (s_tz_sub[0] == '\0' || now != s_tz_sub_at) {
       s_tz_sub_at = now;
+      // Im selben Sekundenzweig auch die Sprache neu lesen: es gibt kein
+      // Ereignis fuer einen Sprachwechsel, und hier wird der Text ohnehin neu
+      // gebaut. Waehrend einer Scroll-Animation kostet es dadurch nichts.
+      strings_refresh();
       timezone_get_launcher_subtitle(s_tz_sub, sizeof(s_tz_sub));
     }
-    menu_cell_basic_draw(ctx, cell, "Zeitzone", s_tz_sub, NULL);
+    menu_cell_basic_draw(ctx, cell, S(STR_LAUNCHER_TIMEZONE), s_tz_sub, NULL);
   }
 }
 
@@ -113,6 +118,8 @@ static void prv_update_app_glance(AppGlanceReloadSession *session, size_t limit,
 }
 
 static void init(void) {
+  // Sprache der Uhr uebernehmen, bevor das erste Fenster Texte holt
+  strings_refresh();
   timer_app_init();
 
   s_launcher_window = window_create();

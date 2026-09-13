@@ -3,11 +3,15 @@
 #include <pebble.h>
 #include "phone.h"
 #include "common.h"
+#include "strings.h"
 
 // AppMessage Keys
 #define KEY_DURATION 5
 #define KEY_UNIQUEID 10
 #define KEY_TOTAL_TIME 15
+// Sprache der Uhr, damit der Pin auf dem Telefon in derselben Sprache
+// gebaut wird wie die Oberflaeche (0 = Englisch, 1 = Deutsch).
+#define KEY_LANG 20
 
 // send one pin message for the timer; a duration of 0 tells the phone to delete the pin
 static void prv_send(CountdownTimer *countdown_timer, int32_t duration_s, int32_t total_time_s) {
@@ -16,6 +20,7 @@ static void prv_send(CountdownTimer *countdown_timer, int32_t duration_s, int32_
   dict_write_int32(iter, KEY_UNIQUEID, countdown_timer_get_id(countdown_timer));
   dict_write_int32(iter, KEY_DURATION, duration_s);
   dict_write_int32(iter, KEY_TOTAL_TIME, total_time_s);
+  dict_write_int32(iter, KEY_LANG, (int32_t)strings_language());
   dict_write_end(iter);
   app_message_outbox_send();
 }

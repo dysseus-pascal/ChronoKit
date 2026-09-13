@@ -1,6 +1,7 @@
 #include <pebble.h>
 #include "rendering.h"
 #include "theme.h"
+#include "strings.h"
 #include "timezone_window.h"
 
 // Zeitzone: oben die AKTUELL GESETZTEN Werte der Uhr (Datum, UTC-Versatz,
@@ -95,17 +96,16 @@
 #endif
 
 // Der Ortsname kommt als Olson-String ("Europe/Zurich") von der Uhr, also
-// englisch. Reine Kosmetik. Die Tabelle liegt im App-Abbild und zaehlt damit
-// zum Speicherabdruck, belegt aber keinen Heap.
+// bereits englisch. Diese Tabelle deutscht ihn ein und darf deshalb NUR bei
+// deutscher Oberflaeche greifen - auf Englisch waere sie schlicht falsch.
+// Reine Kosmetik; sie liegt im App-Abbild und zaehlt zum Speicherabdruck,
+// belegt aber keinen Heap.
 static const char *const s_city_de[][2] = {
   {"Zurich", "Zürich"}, {"Vienna", "Wien"}, {"Rome", "Rom"}, {"Athens", "Athen"},
   {"Brussels", "Brüssel"}, {"Copenhagen", "Kopenhagen"}, {"Moscow", "Moskau"},
   {"Lisbon", "Lissabon"}, {"Prague", "Prag"}, {"Warsaw", "Warschau"},
 };
 
-#if TZ_WEEKDAY
-static const char *const s_weekday_de[] = {"So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"};
-#endif
 
 // gemerkte Heimatzeit
 typedef struct {
@@ -154,13 +154,14 @@ static int32_t prv_current_offset(time_t utc) {
   return (int32_t)localtime(&utc)->tm_gmtoff;
 }
 
-// Anzeigename aus dem Olson-String: Teil hinter dem letzten '/', '_' zu ' ',
-// bekannte Staedte eingedeutscht. Ohne '/' bleibt der String stehen - das ist
-// der Rueckfall "UTC+2", den die Firmware liefert, wenn sie die Region nicht
-// aufloesen kann.
+// Anzeigename aus dem Olson-String: Teil hinter dem letzten '/', '_' zu ' '.
+// Bei DEUTSCHER Oberflaeche zusaetzlich eingedeutscht - auf Englisch waere das
+// falsch, denn der Olson-Name ist bereits die englische Schreibweise.
+// Ohne '/' bleibt der String stehen - das ist der Rueckfall "UTC+2", den die
+// Firmware liefert, wenn sie die Region nicht aufloesen kann.
 static void prv_display_name(const char *raw, char *out, size_t size) {
   if (raw[0] == '\0' || strcmp(raw, "---") == 0) {
-    strncpy(out, "Keine Zone", size);
+    strncpy(out, S(STR_TZ_NO_ZONE), size);
     out[size - 1] = '\0';
     return;
   }
@@ -168,11 +169,13 @@ static void prv_display_name(const char *raw, char *out, size_t size) {
   for (const char *p = raw; *p; p++) {
     if (*p == '/') base = p + 1;
   }
-  for (unsigned i = 0; i < ARRAY_LENGTH(s_city_de); i++) {
-    if (strcmp(base, s_city_de[i][0]) == 0) {
-      strncpy(out, s_city_de[i][1], size);
-      out[size - 1] = '\0';
-      return;
+  if (strings_language() == STRINGS_DE) {
+    for (unsigned i = 0; i < ARRAY_LENGTH(s_city_de); i++) {
+      if (strcmp(base, s_city_de[i][0]) == 0) {
+        strncpy(out, s_city_de[i][1], size);
+        out[size - 1] = '\0';
+        return;
+      }
     }
   }
   strncpy(out, base, size);
@@ -194,7 +197,7 @@ static void prv_format_clock(char *buff, size_t size, const struct tm *t) {
 
 static const char *prv_ampm(const struct tm *t) {
   if (clock_is_24h_style()) return "";
-  return t->tm_hour < 12 ? "AM" : "PM";
+  return t->tm_hour < 12 ? S(STR_AM) : S(STR_PM);
 }
 
 static void prv_format_utc(char *buff, size_t size, int32_t secs) {
@@ -218,10 +221,10 @@ static void prv_format_delta(char *buff, size_t size, int32_t secs, const char *
 // eine reine Differenz von tm_yday kippt sonst am Jahreswechsel ins Gegenteil.
 static const char *prv_day_mark(const struct tm *home, const struct tm *here) {
   if (home->tm_year != here->tm_year) {
-    return home->tm_year > here->tm_year ? "morgen" : "gestern";
+    return home->tm_year > here->tm_year ? S(STR_TZ_TOMORROW) : S(STR_TZ_YESTERDAY);
   }
-  if (home->tm_yday > here->tm_yday) return "morgen";
-  if (home->tm_yday < here->tm_yday) return "gestern";
+  if (home->tm_yday > here->tm_yday) return S(STR_TZ_TOMORROW);
+  if (home->tm_yday < here->tm_yday) return S(STR_TZ_YESTERDAY);
   return "";
 }
 
@@ -293,16 +296,16 @@ void timezone_get_launcher_subtitle(char *buff, size_t size) {
 
   switch (prv_state(&h, zone, known)) {
     case TzZoneUnknown:
-      strncpy(buff, "Zone unbekannt", size);
+      strncpy(buff, S(STR_TZ_SUB_ZONE_UNKNOWN), size);
       buff[size - 1] = '\0';
       return;
     case TzNoHome:
-      strncpy(buff, "Heimatzeit merken", size);
+      strncpy(buff, S(STR_TZ_SUB_NO_HOME), size);
       buff[size - 1] = '\0';
       return;
     case TzAtHome:
       prv_display_name(h.name, city, sizeof(city));
-      snprintf(buff, size, "Daheim: %s", city);
+      snprintf(buff, size, S(STR_TZ_SUB_AT_HOME_FMT), city);
       return;
     default: {
       const time_t shifted = time(NULL) + (time_t)(h.offset + h.fix_min * 60);
@@ -403,11 +406,18 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
   // Ohne gesetzte Zone bleibt der Versatz weg - er waere 0 und wuerde luegen.
   int16_t y = TZ_TOP;
   char date[16];
+  // Die Reihenfolge im Datum ist Sprache, kein Text: 12.09. gegen 9/12.
+  char dnum[12];
+  if (strings_language() == STRINGS_DE) {
+    snprintf(dnum, sizeof(dnum), "%02d.%02d.", here.tm_mday, here.tm_mon + 1);
+  } else {
+    snprintf(dnum, sizeof(dnum), "%d/%d", here.tm_mon + 1, here.tm_mday);
+  }
 #if TZ_WEEKDAY
-  snprintf(date, sizeof(date), "%s %02d.%02d.", s_weekday_de[here.tm_wday % 7],
-           here.tm_mday, here.tm_mon + 1);
+  snprintf(date, sizeof(date), "%s %s",
+           S((StringId)(STR_WD_SUN + (here.tm_wday % 7))), dnum);
 #else
-  snprintf(date, sizeof(date), "%02d.%02d.", here.tm_mday, here.tm_mon + 1);
+  snprintf(date, sizeof(date), "%s", dnum);
 #endif
   char utcs[12] = "";
   if (known) prv_format_utc(utcs, sizeof(utcs), here_off);
@@ -435,7 +445,7 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
   // Ortszeit - neben den grossen Ziffern ist dafuer kein Platz.
   char city[TIMEZONE_NAME_LENGTH];
   if (known) prv_display_name(zone, city, sizeof(city));
-  else       strncpy(city, "Keine Zone", sizeof(city));
+  else       strncpy(city, S(STR_TZ_NO_ZONE), sizeof(city));
   city[sizeof(city) - 1] = '\0';
 #ifdef PBL_ROUND
   graphics_draw_text(ctx, city, fonts_get_system_font(TZ_FONT_CITY),
@@ -503,11 +513,10 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
     if (state == TzZoneUnknown) {
       // Ohne gesetzte Zone liefert time() faktisch Ortszeit, eine Heimatzeit
       // waere also falsch gerechnet. Deshalb wird sie hier gar nicht gezeigt.
-      strncpy(msg, "Die Uhr hat noch keine Zeitzone vom Telefon. Merken ist gesperrt.",
-              sizeof(msg));
+      strncpy(msg, S(STR_TZ_NO_TIMEZONE_MSG), sizeof(msg));
       msg[sizeof(msg) - 1] = '\0';
     } else {
-      snprintf(msg, sizeof(msg), "Keine Heimatzeit. Mitteltaste merkt %s als Heimat.", city);
+      snprintf(msg, sizeof(msg), S(STR_TZ_NO_HOME_MSG), city);
     }
     graphics_draw_text(ctx, msg, fonts_get_system_font(TZ_FONT_HOME),
                        GRect(box_x, block_y + 6, box_w, bottom - block_y - 8),
@@ -521,7 +530,7 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
   const int16_t line_y = block_y + 4;
 
   if (state == TzAtHome) {
-    prv_draw_pair(ctx, home_city, "daheim", TZ_FONT_HOME,
+    prv_draw_pair(ctx, home_city, S(STR_TZ_AT_HOME), TZ_FONT_HOME,
                   GRect(box_x, line_y, box_w, line_h));
     return;
   }
@@ -699,11 +708,11 @@ static void prv_select_click(ClickRecognizerRef rec, void *context) {
   WindowData *data = (WindowData*)context;
   switch (prv_data_state(data)) {
     case TzZoneUnknown: return;
-    case TzNoHome:  prv_remember(data); prv_hint(data, "Heimat gemerkt"); break;
-    case TzAtHome:  prv_remember(data); prv_hint(data, "Heimat aktualisiert"); break;
+    case TzNoHome:  prv_remember(data); prv_hint(data, S(STR_TZ_HINT_HOME_SAVED)); break;
+    case TzAtHome:  prv_remember(data); prv_hint(data, S(STR_TZ_HINT_HOME_UPDATED)); break;
     // Unterwegs schuetzt der lange Druck genau die Information, wegen der man
     // den Screen aufgemacht hat.
-    default:        prv_hint(data, "Lang drücken zum Ersetzen"); return;
+    default:        prv_hint(data, S(STR_TZ_HINT_LONG_REPLACE)); return;
   }
   prv_refresh(data);
 }
@@ -715,7 +724,7 @@ static void prv_select_long(ClickRecognizerRef rec, void *context) {
     return;
   }
   prv_remember(data);
-  prv_hint(data, "Heimat gemerkt");
+  prv_hint(data, S(STR_TZ_HINT_HOME_SAVED));
   prv_refresh(data);
 }
 
@@ -723,25 +732,25 @@ static void prv_up_click(ClickRecognizerRef rec, void *context) {
   WindowData *data = (WindowData*)context;
   if (prv_data_state(data) != TzAway) return;
   const int32_t next = data->home.fix_min + TZ_FIX_STEP;
-  prv_set_fix(data, next, next >= TZ_FIX_STEP ? "Daheim +1 h" : "Korrektur aus");
+  prv_set_fix(data, next, next >= TZ_FIX_STEP ? S(STR_TZ_HINT_FIX_PLUS) : S(STR_TZ_HINT_FIX_OFF));
 }
 
 static void prv_up_long(ClickRecognizerRef rec, void *context) {
   WindowData *data = (WindowData*)context;
   if (prv_data_state(data) != TzAway) return;
-  prv_set_fix(data, 0, "Korrektur aus");
+  prv_set_fix(data, 0, S(STR_TZ_HINT_FIX_OFF));
 }
 
 static void prv_down_click(ClickRecognizerRef rec, void *context) {
   WindowData *data = (WindowData*)context;
   const TzState state = prv_data_state(data);
   if (state == TzAtHome) {
-    prv_hint(data, "Lang drücken zum Löschen");
+    prv_hint(data, S(STR_TZ_HINT_LONG_DELETE));
     return;
   }
   if (state != TzAway) return;
   const int32_t next = data->home.fix_min - TZ_FIX_STEP;
-  prv_set_fix(data, next, next <= -TZ_FIX_STEP ? "Daheim -1 h" : "Korrektur aus");
+  prv_set_fix(data, next, next <= -TZ_FIX_STEP ? S(STR_TZ_HINT_FIX_MINUS) : S(STR_TZ_HINT_FIX_OFF));
 }
 
 static void prv_down_long(ClickRecognizerRef rec, void *context) {
@@ -751,7 +760,7 @@ static void prv_down_long(ClickRecognizerRef rec, void *context) {
     return;
   }
   prv_forget(data);
-  prv_hint(data, "Heimat gelöscht");
+  prv_hint(data, S(STR_TZ_HINT_HOME_DELETED));
   prv_refresh(data);
 }
 

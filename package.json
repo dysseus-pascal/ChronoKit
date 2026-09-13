@@ -1,7 +1,7 @@
 {
   "name": "chronokit",
   "author": "dysseus-pascal",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {},
@@ -21,6 +21,7 @@
     "messageKeys": {
       "KEY_TOTAL_TIME": 15,
       "KEY_UNIQUEID": 10,
+      "KEY_LANG": 20,
       "KEY_DURATION": 5
     },
     "resources": {

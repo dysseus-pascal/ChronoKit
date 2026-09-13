@@ -9,6 +9,10 @@ kleines Startmenü:
 - **Zeitzone** — eigener Screen: zeigt die aktuell gesetzten Werte der Uhr und
   merkt sich auf Wunsch die jetzige Zone als Heimatzeit
 
+Die Oberfläche folgt der **Sprache der Uhr** (Deutsch und Englisch, Englisch als
+Rückfall). Einen eigenen Sprachschalter gibt es bewusst nicht — siehe Abschnitt
+[Sprachen](#sprachen).
+
 ## Unterstützte Geräte
 
 | Plattform | Display | Besonderheit |
@@ -153,6 +157,65 @@ einer mit dem Telefon gekoppelten Uhr kommt der Regionsname; im Emulator immer
 der Ersatzname. Aus demselben Grund zeigen die Bilder oben `UTC+2` statt
 `Zürich`.
 
+## Sprachen
+
+Die App liest beim Start `i18n_get_system_locale()` und folgt damit der
+Einstellung der Uhr unter *Settings → Display → Language*. Ausgeliefert werden
+**Englisch** und **Deutsch**; jede andere Uhrsprache bekommt Englisch.
+
+| Deutsch | Englisch |
+|:--:|:--:|
+| ![Startmenü auf Deutsch](screenshots/emery/10-sprache-de.png) | ![Startmenü auf Englisch](screenshots/emery/11-sprache-en.png) |
+
+Alle Texte stehen in `src/c/strings.def`, eine Zeile je Text:
+
+```
+STR(STR_LAUNCHER_STOPWATCH, 0, "Stopwatch", "Stoppuhr")
+```
+
+Die Datei wird zweimal eingebunden (X-Makro) — einmal für die Aufzählung der
+Schlüssel, einmal für die Tabelle. Eine Zeile mit einer Spalte zu wenig ist
+deshalb ein **Präprozessorfehler**, kein stiller Rückfall auf die falsche
+Sprache. `S(STR_...)` liefert den Text; ein unbekannter Schlüssel oder eine
+leere Spalte fällt auf Englisch zurück, statt abzustürzen.
+
+Englisch ist Spalte 0 und Rückfall, weil die Pebble Time 2 acht Sprachen
+mitbringt, für die wir keine Spalte haben (Català, Español, Nederlands,
+Português, Polski …) — eine deutsche Oberfläche auf einer polnischen Uhr wäre
+schlechter als eine englische. In den übernommenen Screens trägt die
+englische Spalte wörtlich die Originaltexte von Core Devices, damit ein
+englisch eingestelltes ChronoKit dort ausgabegleich mit dem Original bleibt.
+
+**Eine Sprache ergänzen:** in `strings.h` die Aufzählung `StringLang`
+erweitern, in `strings.c` den Zwei-Buchstaben-Vergleich ergänzen, in
+`strings.def` eine Spalte anfügen. Verglichen wird nie auf `"de_DE"`, sondern
+auf die ersten zwei Zeichen — ein Sprachpaket darf auch nur `"de"` liefern.
+
+Zwei Dinge sind Sprache, aber kein Text, und stecken deshalb im Code: die
+Reihenfolge im Datum (`12.09.` gegen `9/13`) und die Eindeutschung von
+Ortsnamen im Zeitzonen-Screen (`Zurich` → `Zürich`). Letztere greift **nur** auf
+Deutsch — der Olson-Name der Uhr ist bereits die englische Schreibweise.
+
+`node tools/strings_check.js` prüft, was der Compiler nicht sieht: leere
+englische Spalte, doppelte Schlüssel, Überschreitung eines Zielpuffers in Bytes
+(Umlaute zählen doppelt), zwischen den Sprachen abweichende Formatplatzhalter
+und Schlüssel, die niemand mehr benutzt.
+
+**Zum Testen:** Der Emulator meldet `en_US`, ein normaler Lauf zeigt also die
+englische Oberfläche — damit ist der echte Weg über die API geprüft. Ein
+Settings-App zum Umstellen hat dieser Emulator-Launcher nicht (nur ChronoKit
+und Watchfaces). Für die deutsche Seite übersteuert man `strings_refresh()`
+vorübergehend in der WSL-Kopie mit `prv_pick_language("de_DE")`, baut dort und
+lässt die Windows-Quelle unangetastet. Nicht `setlocale()` benutzen: `strftime`
+lokalisiert Wochentags- und Monatsnamen nur, solange App-Locale und
+System-Locale übereinstimmen.
+
+Auf einer echten **Pebble 2 Duo** (`flint`) sind die eingebauten Sprachkataloge
+der Firmware abgeschaltet; dort meldet die Uhr dauerhaft `en_US` und ChronoKit
+bleibt englisch, bis vom Telefon ein Sprachpaket installiert wird. Der
+flint-Emulator verhält sich anders — ein grüner Test dort beweist für diese
+Hardware nichts.
+
 ## Farbschema (Grün)
 
 Alle Farben sind in `src/c/theme.h` zentralisiert:
@@ -176,6 +239,8 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
 
 - `src/c/theme.h` — zentrale Farbpalette (siehe Farbschema oben)
 - `src/c/common.h` — gemeinsame Zeiteinheiten, vorher in vier Dateien einzeln definiert
+- `src/c/strings.def` + `strings.*` — alle Texte der Oberfläche, eine Zeile je
+  Text (siehe Abschnitt Sprachen)
 - `src/c/chronokit.c` — Launcher-Menü, bindet alle drei Module ein
 - `src/c/timezone_window.*` — eigener Zeitzonen-Screen (kein Port). Zeichnet alles
   selbst, nutzt die LECO-Pfade aus `rendering.c` und die vorhandenen
@@ -231,6 +296,7 @@ bereinigt, siehe Abschnitt Struktur; die Logik ist unveraendert):
   von Eric Phillips
 
 Eigene Anteile: `chronokit.c` (Launcher), `timezone_window.*` (Zeitzonen-Screen, ab 1.2.0),
+`strings.*` (Übersetzung, ab 1.3.0),
 `theme.h` (Farbpalette), `common.h`, die deutschen Texte, die im Abschnitt Struktur
 genannten Korrekturen und die Kürzung und Bereinigung ab 1.1.2. Der gekürzte Code bleibt
 eine Bearbeitung der Originale.

@@ -8,7 +8,17 @@
 // noch dessen eigene ID trug. Pin 1 bekam also Titel, Restzeit und Launch-Code
 // von Pin 2. Dasselbe galt fuer die Protokollzeile in der Antwort, die die ID
 // ebenfalls erst spaeter aus dem gemeinsamen Objekt las.
-function makeTimerPin(id, totalTimeSec, durationSec) {
+
+// Die Texte des Pins. Welche Spalte gilt, sagt die Uhr per KEY_LANG - das
+// Telefon kann die Uhrsprache nicht von sich aus erfahren. Index 0 ist
+// Englisch und zugleich der Rueckfall, genau wie in src/c/strings.def.
+var PIN_TEXT = [
+  { title: 'Timer expired', open: 'Open timer' },
+  { title: 'Timer abgelaufen', open: 'Timer öffnen' }
+];
+
+function makeTimerPin(id, totalTimeSec, durationSec, lang) {
+  var t = PIN_TEXT[lang] || PIN_TEXT[0];
   // Untertitel = Gesamtdauer als HH:MM
   var tot = totalTimeSec / 60;
   var hr = Math.floor(tot / 60);
@@ -29,7 +39,7 @@ function makeTimerPin(id, totalTimeSec, durationSec) {
     "time": time,
     "layout": {
       "type": "weatherPin",
-      "title": "Timer abgelaufen",
+      "title": t.title,
       "subtitle": hr + ":" + min,
       "tinyIcon": "system://images/ALARM_CLOCK",
       "largeIcon": "system://images/ALARM_CLOCK",
@@ -40,7 +50,7 @@ function makeTimerPin(id, totalTimeSec, durationSec) {
     },
     "actions": [
       {
-        "title": "Timer oeffnen",
+        "title": t.open,
         "type": "openWatchApp",
         // launch code = timer id * 100 + Aktion (10 = oeffnen)
         "launchCode": id * 100 + 10
@@ -80,8 +90,10 @@ function timelineRequest(pin, type, callback) {
 }
 
 // ********** AppMessage ********** //
-// Watch sends KEY_UNIQUEID / KEY_DURATION / KEY_TOTAL_TIME (src/c/phone.c);
-// KEY_DURATION > 0 inserts the pin, 0 deletes it.
+// Watch sends KEY_UNIQUEID / KEY_DURATION / KEY_TOTAL_TIME / KEY_LANG
+// (src/c/phone.c); KEY_DURATION > 0 inserts the pin, 0 deletes it.
+// KEY_LANG ist die Sprache der Uhr (0 = Englisch, 1 = Deutsch); fehlt sie,
+// weil eine aeltere Uhrseite laeuft, faellt der Pin auf Englisch zurueck.
 Pebble.addEventListener('appmessage', function(e) {
   if (!e.payload.hasOwnProperty('KEY_DURATION')) return;
   // timeline needs SDK 3.0+
@@ -89,7 +101,7 @@ Pebble.addEventListener('appmessage', function(e) {
 
   var duration = e.payload.KEY_DURATION;
   var pin = makeTimerPin(e.payload.KEY_UNIQUEID.toString(),
-                         e.payload.KEY_TOTAL_TIME, duration);
+                         e.payload.KEY_TOTAL_TIME, duration, e.payload.KEY_LANG);
 
   if (duration > 0) {
     timelineRequest(pin, 'PUT', function (id, responseText) {

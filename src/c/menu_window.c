@@ -11,6 +11,7 @@
 
 #include <pebble.h>
 #include "menu_window.h"
+#include "strings.h"
 #include "theme.h"
 
 // Constants
@@ -209,7 +210,7 @@ MenuWindow *menu_window_create(MenuWindowCallbacks menu_window_callbacks, bool a
   layer_add_child(root, menu_layer_get_layer(menu_window->menu));
   // create text layer
   menu_window->text = text_layer_create(GRect(0, PBL_IF_ROUND_ELSE(129, 85), bounds.size.w, 20));
-  text_layer_set_text(menu_window->text, "Keine Timer");
+  text_layer_set_text(menu_window->text, S(STR_TIMER_LIST_EMPTY));
   text_layer_set_font(menu_window->text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text_alignment(menu_window->text, GTextAlignmentCenter);
   text_layer_set_background_color(menu_window->text, GColorClear);

@@ -7,6 +7,7 @@
 
 #include <pebble.h>
 #include "timer_app.h"
+#include "strings.h"
 #include "countdown_timer.h"
 #include "menu_window.h"
 #include "detail_window.h"
@@ -135,7 +136,7 @@ static void app_timer_callback(void *data) {
     detail_window_deep_refresh(s_detail_window);
     // show timer confirmation window
     popup_window_set_countdown_timer(s_popup_window, countdown_timer);
-    popup_window_set_title(s_popup_window, "Zeit ist um!");
+    popup_window_set_title(s_popup_window, S(STR_POPUP_TIME_UP));
     popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
     popup_window_set_pdc(s_popup_window, RESOURCE_ID_ICON_ALARM_CLOCK, true);
     popup_window_set_auto_close_duration(s_popup_window, 15000);
@@ -304,7 +305,7 @@ static void detail_window_delete_timer_callback(CountdownTimer *countdown_timer,
   detail_window_pop(s_detail_window, true);
 
   // show timer confirmation window
-  popup_window_set_title(s_popup_window, "Timer gelöscht");
+  popup_window_set_title(s_popup_window, S(STR_POPUP_TIMER_DELETED));
   popup_window_set_highlight_color(s_popup_window, ZM_COLOR_FILL);
   popup_window_set_pdc(s_popup_window, RESOURCE_ID_ICON_DELETED, false);
   popup_window_set_auto_close_duration(s_popup_window, popup_window_get_pdc_duration(s_popup_window));

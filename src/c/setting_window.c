@@ -6,6 +6,7 @@
 
 #include <pebble.h>
 #include "setting_window.h"
+#include "strings.h"
 #include "selection_layer.h"
 #include "theme.h"
 #include "common.h"
@@ -71,13 +72,15 @@ static void update_sub_text(SettingWindow *setting_window) {
 
   // format end time
   time_t end = ((int64_t)time(NULL) * MSEC_IN_SEC + (int64_t)time_ms(NULL, NULL) + duration) / MSEC_IN_SEC;
-  static char buff[] = "End: 00:00 AM";
+  // Das Label steht bewusst NICHT im strftime-Format: strftime schreibt gar
+  // nichts, wenn das Ergebnis nicht in den Puffer passt - eine laengere
+  // Uebersetzung haette also die ganze Zeile verschwinden lassen. Der Puffer
+  // bleibt static, weil text_layer_set_text den Text nicht kopiert.
+  static char buff[28];
+  char clock[12];
   struct tm *tick_time = localtime(&end);
-  if (clock_is_24h_style()) {
-    strftime(buff, sizeof(buff), "End: %k:%M", tick_time);
-  } else {
-    strftime(buff, sizeof(buff), "End: %l:%M %p", tick_time);
-  }
+  strftime(clock, sizeof(clock), clock_is_24h_style() ? "%k:%M" : "%l:%M %p", tick_time);
+  snprintf(buff, sizeof(buff), "%s %s", S(STR_SETTING_END), clock);
   text_layer_set_text(setting_window->sub_text, buff);
 }
 
@@ -129,7 +132,7 @@ static void prv_window_load(Window *window) {
   GRect bounds = layer_get_frame(root);
   // main text
   setting_window->main_text = text_layer_create(GRect(0, bounds.size.h/7, bounds.size.w, 40));
-  text_layer_set_text(setting_window->main_text, "Timer stellen");
+  text_layer_set_text(setting_window->main_text, S(STR_SETTING_TITLE));
   text_layer_set_font(setting_window->main_text, fonts_get_system_font(MAIN_FONT));
   text_layer_set_text_alignment(setting_window->main_text, GTextAlignmentCenter);
   text_layer_set_background_color(setting_window->main_text, GColorClear);

@@ -43,14 +43,14 @@ function run(file, msgs) {
 
 // Timer 11 (25 min) und 22 (90 min) anlegen, danach 11 loeschen
 const MSGS = [
-  { KEY_UNIQUEID: 11, KEY_TOTAL_TIME: 1500, KEY_DURATION: 1500 },
-  { KEY_UNIQUEID: 22, KEY_TOTAL_TIME: 5400, KEY_DURATION: 5400 },
-  { KEY_UNIQUEID: 11, KEY_TOTAL_TIME: 0, KEY_DURATION: 0 },
+  { KEY_UNIQUEID: 11, KEY_TOTAL_TIME: 1500, KEY_DURATION: 1500, KEY_LANG: 1 },
+  { KEY_UNIQUEID: 22, KEY_TOTAL_TIME: 5400, KEY_DURATION: 5400, KEY_LANG: 1 },
+  { KEY_UNIQUEID: 11, KEY_TOTAL_TIME: 0, KEY_DURATION: 0, KEY_LANG: 1 },
 ];
 const WANT = {
-  11: [{ method: 'PUT', subtitle: '00:25', launchCode: 1110, timeSet: true },
-       { method: 'DELETE', subtitle: '00:00', launchCode: 1110, timeSet: false }],
-  22: [{ method: 'PUT', subtitle: '01:30', launchCode: 2210, timeSet: true }],
+  11: [{ method: "PUT", subtitle: "00:25", launchCode: 1110, timeSet: true, title: "Timer abgelaufen" },
+       { method: "DELETE", subtitle: "00:00", launchCode: 1110, timeSet: false, title: "Timer abgelaufen" }],
+  22: [{ method: "PUT", subtitle: "01:30", launchCode: 2210, timeSet: true, title: "Timer abgelaufen" }],
 };
 
 function check(label, file, strict) {
@@ -67,6 +67,7 @@ function check(label, file, strict) {
     const ok = !!want && id === String(b.id) && r.method === want.method &&
                b.layout.subtitle === want.subtitle &&
                b.actions[0].launchCode === want.launchCode &&
+               b.layout.title === want.title &&
                timeSet === want.timeSet;
     if (!ok) bad++;
     console.log('  ' + r.method.padEnd(6) + ' /' + id +
