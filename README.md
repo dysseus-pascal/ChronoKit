@@ -167,7 +167,7 @@ Einstellung der Uhr unter *Settings → Display → Language*. Ausgeliefert werd
 |:--:|:--:|
 | ![Startmenü auf Deutsch](screenshots/emery/10-sprache-de.png) | ![Startmenü auf Englisch](screenshots/emery/11-sprache-en.png) |
 
-Alle Texte stehen in `src/c/strings.def`, eine Zeile je Text:
+Alle Texte stehen in `src/c/strings_table.h`, eine Zeile je Text:
 
 ```
 STR(STR_LAUNCHER_STOPWATCH, 0, "Stopwatch", "Stoppuhr")
@@ -188,7 +188,7 @@ englisch eingestelltes ChronoKit dort ausgabegleich mit dem Original bleibt.
 
 **Eine Sprache ergänzen:** in `strings.h` die Aufzählung `StringLang`
 erweitern, in `strings.c` den Zwei-Buchstaben-Vergleich ergänzen, in
-`strings.def` eine Spalte anfügen. Verglichen wird nie auf `"de_DE"`, sondern
+`strings_table.h` eine Spalte anfügen. Verglichen wird nie auf `"de_DE"`, sondern
 auf die ersten zwei Zeichen — ein Sprachpaket darf auch nur `"de"` liefern.
 
 Zwei Dinge sind Sprache, aber kein Text, und stecken deshalb im Code: die
@@ -239,7 +239,7 @@ und brauchen keine Anpassung. Der Timeline-Pin (src/pkjs/index.js) nutzt ebenfal
 
 - `src/c/theme.h` — zentrale Farbpalette (siehe Farbschema oben)
 - `src/c/common.h` — gemeinsame Zeiteinheiten, vorher in vier Dateien einzeln definiert
-- `src/c/strings.def` + `strings.*` — alle Texte der Oberfläche, eine Zeile je
+- `src/c/strings_table.h` + `strings.*` — alle Texte der Oberfläche, eine Zeile je
   Text (siehe Abschnitt Sprachen)
 - `src/c/chronokit.c` — Launcher-Menü, bindet alle drei Module ein
 - `src/c/timezone_window.*` — eigener Zeitzonen-Screen (kein Port). Zeichnet alles

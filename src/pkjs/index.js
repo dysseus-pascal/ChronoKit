@@ -11,7 +11,7 @@
 
 // Die Texte des Pins. Welche Spalte gilt, sagt die Uhr per KEY_LANG - das
 // Telefon kann die Uhrsprache nicht von sich aus erfahren. Index 0 ist
-// Englisch und zugleich der Rueckfall, genau wie in src/c/strings.def.
+// Englisch und zugleich der Rueckfall, genau wie in src/c/strings_table.h.
 var PIN_TEXT = [
   { title: 'Timer expired', open: 'Open timer' },
   { title: 'Timer abgelaufen', open: 'Timer öffnen' }
