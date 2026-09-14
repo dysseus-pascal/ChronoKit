@@ -301,9 +301,16 @@ Eigene Anteile: `chronokit.c` (Launcher), `timezone_window.*` (Zeitzonen-Screen,
 genannten Korrekturen und die Kürzung und Bereinigung ab 1.1.2. Der gekürzte Code bleibt
 eine Bearbeitung der Originale.
 
-**Lizenzlage:** Beide Quell-Repositories sind ohne Lizenzdatei veroeffentlicht. Eine
-ausdrueckliche Nutzungsrechtseinraeumung fehlt daher, und dieses Repository kann fuer den
-uebernommenen Code folglich auch keine Lizenz vergeben. Es liegt als oeffentliches
-Repository auf GitHub, wo die Nutzungsbedingungen (Abschnitt D.5) das Ansehen und Forken
-oeffentlicher Repositories abdecken. Wer den Code darueber hinaus verwenden will, sollte
-sich an Core Devices wenden.
+**Lizenzlage:** Beide Quell-Repositories sind ohne Lizenzdatei veroeffentlicht (zuletzt
+geprueft am 14.09.2026). Eine ausdrueckliche Nutzungsrechtseinraeumung fehlt daher, und
+dieses Repository kann fuer den uebernommenen Code folglich auch keine Lizenz vergeben --
+auch nicht fuer die eigenen Aenderungen daran, denn eine Bearbeitung bleibt an das
+Original gebunden. Es liegt als oeffentliches Repository auf GitHub, wo die
+Nutzungsbedingungen (Abschnitt D.5) das Ansehen und Forken oeffentlicher Repositories
+abdecken. Wer den Code darueber hinaus verwenden will, sollte sich an Core Devices wenden.
+
+[LICENSE](LICENSE) trennt beides auf: die davon unabhaengigen Dateien -- Starter,
+Zeitzonen-Screen, Uebersetzung, Farbpalette, Hilfsskripte -- sind gemeinfrei (CC0 1.0),
+fuer den uebernommenen Rest wird kein Recht eingeraeumt. Die Schwesterapps Drinktervall
+und Flynformer sind Eigenentwicklungen und deshalb vollstaendig gemeinfrei. Reicht Core
+Devices eine freie Lizenz nach, kann ChronoKit nachziehen.
