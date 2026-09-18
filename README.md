@@ -314,3 +314,31 @@ Zeitzonen-Screen, Uebersetzung, Farbpalette, Hilfsskripte -- sind gemeinfrei (CC
 fuer den uebernommenen Rest wird kein Recht eingeraeumt. Die Schwesterapps Drinktervall
 und Flynformer sind Eigenentwicklungen und deshalb vollstaendig gemeinfrei. Reicht Core
 Devices eine freie Lizenz nach, kann ChronoKit nachziehen.
+
+## Store-Symbole
+
+Der Appstore nimmt **nichts aus der `.pbw`**. Das `menuIcon` darin ist das
+Symbol im Starter der Uhr; für die Store-Liste liegen im Entwicklerportal zwei
+eigene Bilder, `icon_large` und `icon_small`. Ein Watchface braucht sie nicht,
+eine Watchapp schon.
+
+Angefordert werden sie in festen Massen — gross **80×80** und **144×144**,
+klein **28×28** und **48×48** —, jeweils mit `exact` in der Adresse: die Masse
+werden **erzwungen, nicht eingepasst**. Etwas Nicht-Quadratisches kommt verzogen
+zurück. Das grosse Symbol legt der Store ausserdem für sein Teilen-Bild durch
+eine abgerundete Maske — darum eine gefüllte Kachel und keine freistehende
+Linie.
+
+In [store/](store/) liegen `icon-144.png` und `icon-48.png`:
+
+```bash
+python3 tools/make_store_icon.py store
+```
+
+ChronoKit ist der eine Sonderfall: sein `system_icon.png` ist von Hand gesetzt
+und hatte nie ein Werkzeug. Es nachträglich als Geometrie nachzubauen hätte ein
+ausgeliefertes Symbol aufs Spiel gesetzt — trifft die Nachbildung einen Punkt
+daneben, ändert sich das Symbol auf jeder Uhr, auf der die App schon liegt.
+Darum rührt dieses Werkzeug die Bitmap nicht an und zeichnet nur die Kacheln.
+Der Preis ist ehrlich zu nennen: die Stoppuhr steht damit zweimal da, einmal
+als Punkte und einmal als Geometrie.
