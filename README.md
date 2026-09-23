@@ -342,3 +342,10 @@ daneben, ändert sich das Symbol auf jeder Uhr, auf der die App schon liegt.
 Darum rührt dieses Werkzeug die Bitmap nicht an und zeichnet nur die Kacheln.
 Der Preis ist ehrlich zu nennen: die Stoppuhr steht damit zweimal da, einmal
 als Punkte und einmal als Geometrie.
+
+## Bauen
+
+Auf GitHub baut jeder Push auf `main` die pbw neu, checkt sie ein und legt zu
+einer neuen Fassung in `package.json` ein Release an — wie bei den
+Schwesterapps (`.github/workflows/bauen.yml`). Die Notizen kommen aus
+`.github/release/<fassung>.md`.
