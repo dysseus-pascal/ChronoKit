@@ -11,10 +11,15 @@
 
 // Die Texte des Pins. Welche Spalte gilt, sagt die Uhr per KEY_LANG - das
 // Telefon kann die Uhrsprache nicht von sich aus erfahren. Index 0 ist
-// Englisch und zugleich der Rueckfall, genau wie in src/c/strings_table.h.
+// Englisch und zugleich der Rueckfall, genau wie in src/c/strings_table.h;
+// dann 1 Deutsch, 2 Franzoesisch, 3 Italienisch, 4 Spanisch (StringLang in
+// src/c/strings.h).
 var PIN_TEXT = [
   { title: 'Timer expired', open: 'Open timer' },
-  { title: 'Timer abgelaufen', open: 'Timer öffnen' }
+  { title: 'Timer abgelaufen', open: 'Timer öffnen' },
+  { title: 'Minuteur écoulé', open: 'Ouvrir le minuteur' },
+  { title: 'Timer scaduto', open: 'Apri il timer' },
+  { title: 'Temporizador terminado', open: 'Abrir temporizador' }
 ];
 
 function makeTimerPin(id, totalTimeSec, durationSec, lang) {
@@ -92,7 +97,7 @@ function timelineRequest(pin, type, callback) {
 // ********** AppMessage ********** //
 // Watch sends KEY_UNIQUEID / KEY_DURATION / KEY_TOTAL_TIME / KEY_LANG
 // (src/c/phone.c); KEY_DURATION > 0 inserts the pin, 0 deletes it.
-// KEY_LANG ist die Sprache der Uhr (0 = Englisch, 1 = Deutsch); fehlt sie,
+// KEY_LANG ist die Sprache der Uhr (0 en, 1 de, 2 fr, 3 it, 4 es); fehlt sie,
 // weil eine aeltere Uhrseite laeuft, faellt der Pin auf Englisch zurueck.
 Pebble.addEventListener('appmessage', function(e) {
   if (!e.payload.hasOwnProperty('KEY_DURATION')) return;

@@ -9,8 +9,8 @@ kleines Startmenü:
 - **Zeitzone** — eigener Screen: zeigt die aktuell gesetzten Werte der Uhr und
   merkt sich auf Wunsch die jetzige Zone als Heimatzeit
 
-Die Oberfläche folgt der **Sprache der Uhr** (Deutsch und Englisch, Englisch als
-Rückfall). Einen eigenen Sprachschalter gibt es bewusst nicht — siehe Abschnitt
+Die Oberfläche folgt der **Sprache der Uhr** (Deutsch, Englisch, Französisch,
+Italienisch und Spanisch, Englisch als Rückfall). Einen eigenen Sprachschalter gibt es bewusst nicht — siehe Abschnitt
 [Sprachen](#sprachen).
 
 ## Unterstützte Geräte
@@ -161,7 +161,8 @@ der Ersatzname. Aus demselben Grund zeigen die Bilder oben `UTC+2` statt
 
 Die App liest beim Start `i18n_get_system_locale()` und folgt damit der
 Einstellung der Uhr unter *Settings → Display → Language*. Ausgeliefert werden
-**Englisch** und **Deutsch**; jede andere Uhrsprache bekommt Englisch.
+**Englisch**, **Deutsch**, **Französisch**, **Italienisch** und **Spanisch**;
+jede andere Uhrsprache bekommt Englisch.
 
 | Deutsch | Englisch |
 |:--:|:--:|
@@ -170,7 +171,7 @@ Einstellung der Uhr unter *Settings → Display → Language*. Ausgeliefert werd
 Alle Texte stehen in `src/c/strings_table.h`, eine Zeile je Text:
 
 ```
-STR(STR_LAUNCHER_STOPWATCH, 0, "Stopwatch", "Stoppuhr")
+STR(STR_LAUNCHER_STOPWATCH, 0, "Stopwatch", "Stoppuhr", "Chronomètre", "Cronometro", "Cronómetro")
 ```
 
 Die Datei wird zweimal eingebunden (X-Makro) — einmal für die Aufzählung der
@@ -179,22 +180,37 @@ deshalb ein **Präprozessorfehler**, kein stiller Rückfall auf die falsche
 Sprache. `S(STR_...)` liefert den Text; ein unbekannter Schlüssel oder eine
 leere Spalte fällt auf Englisch zurück, statt abzustürzen.
 
-Englisch ist Spalte 0 und Rückfall, weil die Pebble Time 2 acht Sprachen
-mitbringt, für die wir keine Spalte haben (Català, Español, Nederlands,
-Português, Polski …) — eine deutsche Oberfläche auf einer polnischen Uhr wäre
+Englisch ist Spalte 0 und Rückfall, weil die Pebble Time 2 Sprachen
+mitbringt, für die wir keine Spalte haben (Català, Nederlands, Português,
+Polski …) — eine deutsche Oberfläche auf einer polnischen Uhr wäre
 schlechter als eine englische. In den übernommenen Screens trägt die
 englische Spalte wörtlich die Originaltexte von Core Devices, damit ein
 englisch eingestelltes ChronoKit dort ausgabegleich mit dem Original bleibt.
 
+Die Spalten stehen in der Reihenfolge `en`, `de`, `fr`, `it`, `es`. Dieselbe
+Nummer geht als `KEY_LANG` ans Telefon, das damit die Sprache des
+Timeline-Pins wählt: 0 Englisch, 1 Deutsch, 2 Französisch, 3 Italienisch,
+4 Spanisch. Eine ältere Telefonseite, die nur 0 und 1 kennt, fällt für die
+neuen Nummern auf Englisch zurück.
+
+Französisch, Italienisch und Spanisch sind knapp statt wörtlich übersetzt —
+sie sind oft länger als Deutsch, die Zeilen auf der Uhr sind es nicht. Die
+Heimatzeit heisst dort *Domicile* bzw. *Casa*, die Wochentage sind wie auf
+Deutsch zwei Buchstaben. *AM*/*PM* bleiben in allen Sprachen stehen.
+
 **Eine Sprache ergänzen:** in `strings.h` die Aufzählung `StringLang`
-erweitern, in `strings.c` den Zwei-Buchstaben-Vergleich ergänzen, in
+hinten erweitern, in `strings.c` den Zwei-Buchstaben-Vergleich ergänzen, in
 `strings_table.h` eine Spalte anfügen. Verglichen wird nie auf `"de_DE"`, sondern
 auf die ersten zwei Zeichen — ein Sprachpaket darf auch nur `"de"` liefern.
 
 Zwei Dinge sind Sprache, aber kein Text, und stecken deshalb im Code: die
-Reihenfolge im Datum (`12.09.` gegen `9/13`) und die Eindeutschung von
-Ortsnamen im Zeitzonen-Screen (`Zurich` → `Zürich`). Letztere greift **nur** auf
-Deutsch — der Olson-Name der Uhr ist bereits die englische Schreibweise.
+Reihenfolge im Datum (`12.09.` auf Deutsch, `12/09` auf Französisch,
+Italienisch und Spanisch, `9/12` auf Englisch) und die Übersetzung von
+Ortsnamen im Zeitzonen-Screen (`Zurich` → `Zürich`, `Zurigo`, `Zúrich`). Die
+Tabelle `s_city` in `timezone_window.c` hat je Sprache eine Spalte; wo eine
+Sprache den Ort wie Englisch schreibt, bleibt der Olson-Name stehen. Sie greift
+**nie** auf Englisch — der Olson-Name der Uhr ist bereits die englische
+Schreibweise. Reine Zonen wie `UTC+2` werden nicht übersetzt.
 
 `node tools/strings_check.js` prüft, was der Compiler nicht sieht: leere
 englische Spalte, doppelte Schlüssel, Überschreitung eines Zielpuffers in Bytes

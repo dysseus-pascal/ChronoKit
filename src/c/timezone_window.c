@@ -96,14 +96,32 @@
 #endif
 
 // Der Ortsname kommt als Olson-String ("Europe/Zurich") von der Uhr, also
-// bereits englisch. Diese Tabelle deutscht ihn ein und darf deshalb NUR bei
-// deutscher Oberflaeche greifen - auf Englisch waere sie schlicht falsch.
+// bereits englisch. Diese Tabelle uebersetzt ihn und darf deshalb NUR bei
+// nicht-englischer Oberflaeche greifen - auf Englisch waere sie schlicht falsch.
+// Spalten wie StringLang (en, de, fr, it, es); die englische ist der Schluessel,
+// also der Olson-Name selbst. NULL heisst: diese Sprache schreibt den Ort wie
+// Englisch, der Name bleibt stehen. Nur Orte, nie Zonen: "UTC+2" und
+// Olson-Kennungen ohne Stadt werden nicht angefasst.
 // Reine Kosmetik; sie liegt im App-Abbild und zaehlt zum Speicherabdruck,
 // belegt aber keinen Heap.
-static const char *const s_city_de[][2] = {
-  {"Zurich", "Zürich"}, {"Vienna", "Wien"}, {"Rome", "Rom"}, {"Athens", "Athen"},
-  {"Brussels", "Brüssel"}, {"Copenhagen", "Kopenhagen"}, {"Moscow", "Moskau"},
-  {"Lisbon", "Lissabon"}, {"Prague", "Prag"}, {"Warsaw", "Warschau"},
+static const char *const s_city[][STRINGS_LANG_COUNT] = {
+  {"Zurich",     "Zürich",     NULL,         "Zurigo",     "Zúrich"},
+  {"Vienna",     "Wien",       "Vienne",     NULL,         "Viena"},
+  {"Rome",       "Rom",        NULL,         "Roma",       "Roma"},
+  {"Athens",     "Athen",      "Athènes",    "Atene",      "Atenas"},
+  {"Brussels",   "Brüssel",    "Bruxelles",  "Bruxelles",  "Bruselas"},
+  {"Copenhagen", "Kopenhagen", "Copenhague", "Copenaghen", "Copenhague"},
+  {"Moscow",     "Moskau",     "Moscou",     "Mosca",      "Moscú"},
+  {"Lisbon",     "Lissabon",   "Lisbonne",   "Lisbona",    "Lisboa"},
+  {"Prague",     "Prag",       NULL,         "Praga",      "Praga"},
+  {"Warsaw",     "Warschau",   "Varsovie",   "Varsavia",   "Varsovia"},
+  // Deutsch schreibt diese wie Englisch - sie stehen nur fuer die romanischen
+  // Spalten hier.
+  {"London",     NULL,         "Londres",    "Londra",     "Londres"},
+  {"Paris",      NULL,         NULL,         "Parigi",     "París"},
+  {"Berlin",     NULL,         NULL,         "Berlino",    "Berlín"},
+  {"Stockholm",  NULL,         NULL,         "Stoccolma",  "Estocolmo"},
+  {"New_York",   NULL,         NULL,         NULL,         "Nueva York"},
 };
 
 
@@ -155,8 +173,9 @@ static int32_t prv_current_offset(time_t utc) {
 }
 
 // Anzeigename aus dem Olson-String: Teil hinter dem letzten '/', '_' zu ' '.
-// Bei DEUTSCHER Oberflaeche zusaetzlich eingedeutscht - auf Englisch waere das
-// falsch, denn der Olson-Name ist bereits die englische Schreibweise.
+// Bei nicht-englischer Oberflaeche zusaetzlich uebersetzt, wo s_city einen
+// Namen hat - auf Englisch waere das falsch, denn der Olson-Name ist bereits
+// die englische Schreibweise.
 // Ohne '/' bleibt der String stehen - das ist der Rueckfall "UTC+2", den die
 // Firmware liefert, wenn sie die Region nicht aufloesen kann.
 static void prv_display_name(const char *raw, char *out, size_t size) {
@@ -169,10 +188,12 @@ static void prv_display_name(const char *raw, char *out, size_t size) {
   for (const char *p = raw; *p; p++) {
     if (*p == '/') base = p + 1;
   }
-  if (strings_language() == STRINGS_DE) {
-    for (unsigned i = 0; i < ARRAY_LENGTH(s_city_de); i++) {
-      if (strcmp(base, s_city_de[i][0]) == 0) {
-        strncpy(out, s_city_de[i][1], size);
+  const StringLang lang = strings_language();
+  if (lang != STRINGS_EN) {
+    for (unsigned i = 0; i < ARRAY_LENGTH(s_city); i++) {
+      if (strcmp(base, s_city[i][0]) == 0) {
+        if (!s_city[i][lang]) break;   // gleich wie Englisch
+        strncpy(out, s_city[i][lang], size);
         out[size - 1] = '\0';
         return;
       }
@@ -407,9 +428,14 @@ static void prv_layer_draw(Layer *layer, GContext *ctx) {
   int16_t y = TZ_TOP;
   char date[16];
   // Die Reihenfolge im Datum ist Sprache, kein Text: 12.09. gegen 9/12.
+  // Franzoesisch, Italienisch und Spanisch stellen den Tag vorn, wie Deutsch,
+  // aber mit Schraegstrich: 12/09.
   char dnum[12];
-  if (strings_language() == STRINGS_DE) {
+  const StringLang dlang = strings_language();
+  if (dlang == STRINGS_DE) {
     snprintf(dnum, sizeof(dnum), "%02d.%02d.", here.tm_mday, here.tm_mon + 1);
+  } else if (dlang != STRINGS_EN) {
+    snprintf(dnum, sizeof(dnum), "%02d/%02d", here.tm_mday, here.tm_mon + 1);
   } else {
     snprintf(dnum, sizeof(dnum), "%d/%d", here.tm_mon + 1, here.tm_mday);
   }
